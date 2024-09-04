@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "257642462839",
+    "project_id": "ambient-4b28e",
+    "storage_bucket": "ambient-4b28e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:257642462839:android:c7d6c3b2574559cd76d072",
+        "android_client_info": {
+          "package_name": "com.example.ambient"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBi5O-0cD-xZAYO1LkSQNdNkpMkHt5jQ7o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
