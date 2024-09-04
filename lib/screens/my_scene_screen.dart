@@ -7,6 +7,13 @@ import 'package:ambient/widgets/background_widget.dart';
 class MyScenesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Fetch scenes when the screen is first built
+    Future.microtask(() {
+      final homeState = Provider.of<HomeState>(context, listen: false);
+      // Optionally set active areas before fetching scenes
+      homeState.fetchScenes();
+    });
+
     return Scaffold(
       body: BackgroundWidget(
         child: SafeArea(
@@ -61,7 +68,12 @@ class MyScenesScreen extends StatelessWidget {
               Expanded(
                 child: Consumer<HomeState>(
                   builder: (context, homeState, child) {
-                    final scenes = homeState.allScenesFromActivatedAreas;
+                    final scenes = homeState.allScenes;
+                    if (scenes.isEmpty) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
 
                     return GridView.builder(
                       itemCount: scenes.length,
@@ -83,12 +95,10 @@ class MyScenesScreen extends StatelessWidget {
                             } else {
                               // Activate the selected scene
                               homeState.setActiveScene(scene);
-                              //display led setting of a scene when it is selected
+                              // Display LED settings of a scene when it is selected
                               scene.ledSettings.forEach((led) {
-                                debugPrint(
-                                    'LED ${led.ledNumber}: ${led.color}' +
-                                        ' ${led.brightness}' +
-                                        ' ${led.saturation}');
+                                debugPrint('LED ${led.ledNumber}: ${led.color} '
+                                    '${led.brightness} ${led.saturation}');
                               });
                             }
                           },

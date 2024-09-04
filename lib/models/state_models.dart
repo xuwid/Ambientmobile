@@ -381,6 +381,10 @@ class HomeState with ChangeNotifier {
 
   Area? _currentArea;
 
+  List<Scene> get allScenes => _scenes;
+
+  // Getter for active areas
+
   Area? get currentArea => _currentArea;
   List<Scene> get allScenesFromActivatedAreas {
     List<Scene> scenes = [];
@@ -544,27 +548,106 @@ class HomeState with ChangeNotifier {
   //zone Active by toggle
   List<Scene> _scenes = [];
 
-  void addSceneToZone(String zoneTitle, Scene scene) {
-    // Find the area that contains the specified zone
-    final area = areas.firstWhere(
-      (area) => area.zones.any((zone) => zone.title == zoneTitle),
-      // orElse: () => null,
-    );
+// Function to add a scene to a specific zone within the current area
 
-    if (area != null) {
-      final zone = area.zones.firstWhere(
-        (zone) => zone.title == zoneTitle,
-        //orElse: () => null,
+  Future<void> fetchScenes() async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+      if (currentUserId == null) {
+        print('No user is currently logged in.');
+        return;
+      }
+
+      // Get the areas collection for the current user
+      final areasCollection =
+          firestore.collection('users').doc(currentUserId).collection('areas');
+
+      // Query to get only active areas
+      final areasSnapshot =
+          await areasCollection.where('isActive', isEqualTo: true).get();
+
+      // Extract scenes from active areas
+      List<Scene> fetchedScenes = [];
+      for (var areaDoc in areasSnapshot.docs) {
+        final area = Area.fromFirestore(areaDoc);
+        for (var zone in area.zones) {
+          fetchedScenes.addAll(zone.scenes);
+        }
+      }
+
+      _scenes = fetchedScenes;
+      notifyListeners();
+      print('Scenes fetched successfully.');
+    } catch (error) {
+      print('Failed to fetch scenes from Firestore: $error');
+    }
+  }
+
+  void addSceneToZone(String zoneTitle, Scene scene) async {
+    try {
+      // Get the Firestore instance and current user ID
+      final firestore = FirebaseFirestore.instance;
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+      if (currentUserId == null) {
+        print('No user is currently logged in.');
+        return;
+      }
+
+      // Find the area that contains the specified zone
+      final areasCollection =
+          firestore.collection('users').doc(currentUserId).collection('areas');
+
+      // Fetch all areas
+      final areasSnapshot = await areasCollection.get();
+
+      // Find the area containing the zone
+      final areaDoc = areasSnapshot.docs.firstWhere(
+        (doc) {
+          final area = Area.fromFirestore(doc);
+          return area.zones.any((zone) => zone.title == zoneTitle);
+        },
+        orElse: () => throw Exception('Area not found'),
       );
 
-      if (zone != null) {
-        zone.addScene(scene);
-        notifyListeners();
-      } else {
-        debugPrint('Zone not found.');
-      }
-    } else {
-      debugPrint('Area not found.');
+      final area = Area.fromFirestore(areaDoc);
+
+      // Find the specific zone in the area
+      final zone = area.zones.firstWhere(
+        (zone) => zone.title == zoneTitle,
+        orElse: () => throw Exception('Zone not found'),
+      );
+
+      // Add the scene to the zone locally
+      // zone.scenes.add(scene);
+      // notifyListeners(); // Notify listeners if applicable
+
+      // Reference to the area document
+      final areaRef = areasCollection.doc(area.id);
+
+      // Update the zone in the list of zones within the area document
+      final updatedZones = area.zones.map((z) {
+        if (z.title == zoneTitle) {
+          // Update the specific zone with the new scene
+          return Zone(
+            // id: z.id, // Ensure you maintain the zone's ID
+            title: z.title,
+            ports: z.ports,
+            scenes: [...z.scenes, scene], // Add the new scene
+          );
+        }
+        return z;
+      }).toList();
+
+      await areaRef.update({
+        'zones': updatedZones.map((z) => z.toMap()).toList(),
+      });
+
+      print('Scene added to zone and updated in Firestore.');
+    } catch (error) {
+      print('Failed to update zone scenes in Firestore: $error');
     }
   }
 
