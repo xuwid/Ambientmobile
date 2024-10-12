@@ -1,6 +1,7 @@
 // lib/widgets/bottom_navigation_bar.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ambient/utils/assets.dart';
 
 class CustomBottomNavigationBar extends StatelessWidget {
   final int selectedIndex;
@@ -21,23 +22,35 @@ class CustomBottomNavigationBar extends StatelessWidget {
           currentIndex: selectedIndex,
           onTap: onItemTapped,
           backgroundColor: Colors.black,
-          selectedItemColor: Colors.purple,
-          unselectedItemColor: Colors.white,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: const Color(0xFFBBBBBB),
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home_sharp),
+              icon: Image(
+                image: AssetImage("assets/home_un.png"),
+                width: 25,
+              ),
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.view_list),
+              icon: Image(
+                image: AssetImage("assets/scenes_un.png"),
+                width: 25,
+              ),
               label: 'Scenes',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_customize_sharp),
+              icon: Image(
+                image: AssetImage("assets/customize_un.png"),
+                width: 25,
+              ),
               label: 'Customize',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.settings),
+              icon: Image(
+                image: AssetImage("assets/settings_un.png"),
+                width: 25,
+              ),
               label: 'Settings',
             ),
           ],

@@ -10,9 +10,17 @@ class ColorPickerApp extends StatelessWidget {
       home: Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-            // Uncomment the below line to test the ColorPicker
-            // child: ColorPicker(size: 225, initialBrightness: 1.0, initialSaturation: 1.0, initialColor: Colors.white, onColorChanged: (color) {}, onBrightnessChanged: (value) {}, onSaturationChanged: (value) {}, whiteLight: true),
-            ),
+          // Uncomment the below line to test the ColorPicker
+          child: ColorPicker(
+              size: 225,
+              initialBrightness: 1.0,
+              initialSaturation: 1.0,
+              initialColor: Colors.white,
+              onColorChanged: (color) {},
+              onBrightnessChanged: (value) {},
+              onSaturationChanged: (value) {},
+              whiteLight: true),
+        ),
       ),
     );
   }

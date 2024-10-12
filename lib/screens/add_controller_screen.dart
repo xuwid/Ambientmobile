@@ -1,11 +1,86 @@
+import 'package:ambient/screens/controller_configure.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ambient/widgets/background_widget.dart';
-import 'package:ambient/widgets/loading_indicator.dart'; // Import your circular loading indicator widget
+import 'package:ambient/widgets/loading_indicator.dart'; // Your circular loading indicator widget
+import 'package:flutter_blue_plus/flutter_blue_plus.dart'; // flutter_blue for BLE scanning
+import 'package:permission_handler/permission_handler.dart'; // permission_handler for requesting Bluetooth permissions
+import 'dart:convert';
+import 'package:provider/provider.dart'; // Provider for state management
+import 'package:ambient/models/model.dart'; // Your model
 
-class AddControllerScreen extends StatelessWidget {
-  const AddControllerScreen({super.key, this.isControllerAdded = false});
-  final isControllerAdded;
+class AddControllerScreen extends StatefulWidget {
+  const AddControllerScreen({Key? key}) : super(key: key);
+
+  @override
+  _AddControllerScreenState createState() => _AddControllerScreenState();
+}
+
+class _AddControllerScreenState extends State<AddControllerScreen> {
+  List<Controller> controllerList = [];
+  List<BluetoothDevice> devicesList = [];
+  bool isScanning = false;
+  final String SERVICE_UUID = "01920e8a-4248-7de9-b2f8-af5040efa778";
+  final String DATA_CHAR_UUID = "01920e8a-4248-7564-a1df-a57dde0b7e79";
+  final String KEY = "01920e8a-4248-7bf3-9a78-e63b31ee2b5b";
+
+  @override
+  void initState() {
+    super.initState();
+    requestPermissionsAndStartScan();
+  }
+
+  //dispose method
+  @override
+  void dispose() {
+    //  stopScan();
+    super.dispose();
+  }
+
+  Future<void> requestPermissionsAndStartScan() async {
+    // Request Bluetooth permissions
+    if (await Permission.bluetooth.request().isGranted &&
+        await Permission.location.request().isGranted) {
+      startScan(); // Start scanning if permissions are granted
+    } else {
+      // Handle permission denial
+      print('Bluetooth or Location permission denied');
+    }
+  }
+
+  void startScan() {
+    setState(() {
+      devicesList.clear();
+      controllerList.clear();
+      isScanning = true; // Keep scanning state true until scan is complete
+    });
+
+    // Start scanning for nearby BLE devices
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 10))
+        .then((_) async {
+      await Future.delayed(const Duration(seconds: 4));
+      setState(() {
+        isScanning = false;
+      });
+    });
+
+    // Listen for scan results
+
+    FlutterBluePlus.scanResults.listen((results) {
+      for (ScanResult result in results) {
+        if (!devicesList.contains(result.device)) {
+          if (result.device.name.isNotEmpty) {
+            setState(() {
+              print('Device: ${result.device.name}');
+              devicesList.add(result.device);
+              controllerList.add(Controller(
+                  name: result.device.advName, device: result.device));
+            });
+          }
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +89,7 @@ class AddControllerScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 60),
+            const SizedBox(height: 30),
             AppBar(
               automaticallyImplyLeading: false,
               backgroundColor: Colors.transparent,
@@ -40,11 +115,17 @@ class AddControllerScreen extends StatelessWidget {
                 'Add Controller',
                 style: GoogleFonts.montserrat(
                   color: Colors.white,
-                  fontSize: 32,
+                  fontSize: 26,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               centerTitle: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: startScan,
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             Padding(
@@ -61,9 +142,63 @@ class AddControllerScreen extends StatelessWidget {
             const SizedBox(height: 40),
             Expanded(
               child: Center(
-                child: isControllerAdded
-                    ? const Text('Controller added')
-                    : CircularLoadingIndicator(), // Use your circular loading indicator widget here
+                child: isScanning
+                    ? CircularLoadingIndicator() // Display the loading indicator during scan
+                    : devicesList.isEmpty
+                        ? const Text(
+                            'No devices found',
+                            style: TextStyle(color: Colors.white),
+                          )
+                        : ListView.builder(
+                            itemCount: controllerList.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Card(
+                                  color: const Color.fromARGB(255, 66, 64, 64)
+                                      .withOpacity(0.9),
+                                  child: ListTile(
+                                    title: Text(
+                                      controllerList[index]
+                                              .device!
+                                              .advName
+                                              .isNotEmpty
+                                          ? controllerList[index]
+                                              .device!
+                                              .advName
+                                          : 'Unknown Device',
+                                      style:
+                                          const TextStyle(color: Colors.white),
+                                    ),
+                                    subtitle: Text(
+                                      controllerList[index]
+                                          .device!
+                                          .remoteId
+                                          .toString(),
+                                      style: TextStyle(color: Colors.grey[400]),
+                                    ),
+                                    onTap: () {
+                                      Provider.of<ControllerProvider>(context,
+                                              listen: false)
+                                          .setCurrentController(
+                                              controllerList[index]);
+                                      connectToDevice(devicesList[index]);
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              ControllerConfigScreen(
+                                            device: controllerList[index],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
               ),
             ),
           ],
@@ -71,4 +206,92 @@ class AddControllerScreen extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> connectToDevice(BluetoothDevice device) async {
+    try {
+      await device.connect();
+      await updateMTU(device);
+      await afterConnectionSendData(device);
+    } catch (e) {
+      print("Error connecting to device: $e");
+    }
+  }
+
+  Future<void> updateMTU(BluetoothDevice device) async {
+    try {
+      int mtu = await device.requestMtu(512);
+      print("MTU: $mtu");
+    } catch (e) {
+      print("Error requesting MTU: $e");
+    }
+  }
+
+  Future<void> afterConnectionSendData(BluetoothDevice device) async {
+    try {
+      List<BluetoothService> services = await device.discoverServices();
+      BluetoothCharacteristic? targetCharacteristic;
+
+      for (BluetoothService service in services) {
+        if (service.uuid.toString() == SERVICE_UUID) {
+          for (BluetoothCharacteristic characteristic
+              in service.characteristics) {
+            if (characteristic.uuid.toString() == DATA_CHAR_UUID) {
+              targetCharacteristic = characteristic;
+              break;
+            }
+          }
+        }
+        if (targetCharacteristic != null) break;
+      }
+
+      if (targetCharacteristic == null) {
+        print("Characteristic not found!");
+        return;
+      }
+
+      await targetCharacteristic.setNotifyValue(true);
+      final subscription = targetCharacteristic.onValueReceived.listen((value) {
+        String receivedData = utf8.decode(value);
+
+        try {
+          print("Received data: sdk $receivedData");
+
+          Map<String, dynamic> jsonResponse = jsonDecode(receivedData);
+          if (jsonResponse.containsKey("a") && jsonResponse["a"] == "mac") {
+            String macAddress = jsonResponse["mac"];
+            Provider.of<ControllerProvider>(context, listen: false)
+                .setCurrentControllerID(macAddress);
+            print("MAC Address: $macAddress");
+          }
+        } catch (e) {
+          print("Error parsing JSON: $e");
+        }
+      });
+
+      Future<void> sendData(Map<String, String> commandData) async {
+        String jsonData = jsonEncode(commandData);
+        List<int> bytesToSend = utf8.encode(jsonData);
+        await targetCharacteristic!.write(bytesToSend, withoutResponse: false);
+      }
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      await sendData({"a": "key", "key": KEY});
+      await Future.delayed(const Duration(milliseconds: 300));
+      await sendData({"a": "gm"});
+      device.cancelWhenDisconnected(subscription);
+    } catch (e) {
+      print("Error during Bluetooth communication: $e");
+    }
+  }
+}
+
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ControllerProvider(),
+      child: const MaterialApp(
+        home: AddControllerScreen(),
+      ),
+    ),
+  );
 }

@@ -45,6 +45,10 @@ dependencies:
   firebase_auth: ^4.16.0
   firebase_core: ^2.24.2
   cloud_firestore: ^4.14.0
+  sleek_circular_slider: ^2.0.1
+  defer_pointer: ^0.0.2
+  flutter_blue_plus: ^1.33.4
+  
   
 
 dev_dependencies:
@@ -91,7 +95,17 @@ flutter:
     - assets/background.png
     - assets/item_background1.jpg
     - assets/item_background2.jpg
-  # An image asset can refer to one or more resolution-specific "variants", see
+    - assets/rooflights 2.png
+    - assets/rooflights 1.png
+    - assets/bg.png
+    - assets/home_un.png
+    - assets/settings_un.png
+    - assets/scenes_un.png
+    - assets/customize_un.png
+    - assets/controller_setup.png
+    - assets/clock.png
+    - assets/zone_setup.png
+          # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 
   # For details regarding adding assets from package dependencies, see

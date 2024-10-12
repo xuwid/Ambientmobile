@@ -95,11 +95,9 @@ class _ControllerSetupState extends State<ControllerSetup>
                             Navigator.of(context).pop();
                           },
                         ),
-                        const Icon(
-                          Icons.alarm,
-                          color: Colors.white,
-                          size: 30,
-                        ),
+                        const Image(
+                            image: AssetImage('assets/controller_setup.png'),
+                            width: 28),
                         const SizedBox(width: 3),
                         Expanded(
                           child: Center(

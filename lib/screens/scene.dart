@@ -11,6 +11,7 @@ class ChristmasSpectacular extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: BackgroundWidget(
+        konsa: true,
         child: SafeArea(
           child: Column(
             children: [

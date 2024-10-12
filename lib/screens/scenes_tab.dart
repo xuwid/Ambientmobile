@@ -35,6 +35,7 @@ class _RooflineState extends State<Roofline> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: BackgroundWidget(
+        konsa: true,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),

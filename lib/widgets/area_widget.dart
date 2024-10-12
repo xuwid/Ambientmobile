@@ -22,7 +22,7 @@ class RoofLineWidget extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
 
     // Adjust width and height based on screen size
-    final containerWidth = screenWidth * 0.9; // 90% of screen width
+    final containerWidth = screenWidth * 0.95; // 90% of screen width
     final containerHeight = screenHeight * 0.1; // 10% of screen height
 
     return Container(
@@ -46,8 +46,8 @@ class RoofLineWidget extends StatelessWidget {
                     color: Colors.black.withOpacity(0.3),
                     image: DecorationImage(
                       image: AssetImage(index % 2 == 0
-                          ? 'assets/item_background1.jpg'
-                          : 'assets/item_background2.jpg'),
+                          ? 'assets/rooflights 2.png'
+                          : 'assets/rooflights 1.png'),
                       fit: BoxFit.cover,
                     ),
                     borderRadius: BorderRadius.circular(9),

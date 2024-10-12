@@ -284,15 +284,18 @@ class _AreaScreenState extends State<AreaScreen> {
                           Navigator.of(context).pop();
                         },
                       ),
-                      const Icon(Icons.gamepad, color: Colors.white, size: 30),
-                      const SizedBox(width: 3),
+                      const Image(
+                          image: AssetImage("assets/zone_setup.png"),
+                          width: 28,
+                          color: Colors.white),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Zone Setup',
+                          'Zones Setup',
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                            //   fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),

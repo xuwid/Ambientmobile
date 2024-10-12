@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:ambient/models/state_models.dart';
 import 'package:ambient/widgets/starting_light_widget.dart';
 import 'package:ambient/widgets/color_picker.dart';
+import 'package:ambient/widgets/circle_color_picker.dart';
 
 class CustomizeTab extends StatefulWidget {
   const CustomizeTab({super.key});
@@ -23,6 +24,8 @@ class _CustomizeTabState extends State<CustomizeTab> {
   Effect _selectedEffect = Effect(name: 'Static');
   Zone? _selectedZone;
   bool _showInputField = false;
+  CircleColorPickerController colorPickerController =
+      CircleColorPickerController();
 
   @override
   void initState() {
@@ -49,11 +52,8 @@ class _CustomizeTabState extends State<CustomizeTab> {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/background.png',
-              fit: BoxFit.cover,
-            ),
+          const Positioned.fill(
+            child: ColoredBox(color: const Color(0xFF161616)),
           ),
           SafeArea(
             child: Column(
@@ -133,23 +133,49 @@ class _CustomizeTabState extends State<CustomizeTab> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      OutlinedButton(
-                        onPressed: () {
-                          _showBottomSheetMenu(context);
-                        },
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.black.withOpacity(0.5),
-                          side: BorderSide(
-                            color: const Color(0xFF8A2BE2)
-                                .withOpacity(0.5)
-                                .withBlue(200),
-                            width: 2.0,
+                      Container(
+                        height: 40,
+                        width: 140,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFC11687),
+                              Color(0xFFA427CA),
+                              Color(0xFF42E2FF),
+                            ],
                           ),
+                          borderRadius: BorderRadius.circular(
+                              24), // Adjust for button shape
                         ),
-                        child: Text(
-                          _selectedZone?.title ?? 'Select Zone',
-                          style: GoogleFonts.montserrat(
-                            color: Colors.white,
+                        padding: const EdgeInsets.all(
+                            1.0), // This creates the gradient border
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(
+                                0xFF161616), // Solid black inner background
+                            borderRadius: BorderRadius.circular(
+                                24), // Same radius as the outer container
+                          ),
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors
+                                  .transparent, // Keep transparent to show inner container
+                              side: const BorderSide(
+                                color: Colors
+                                    .transparent, // No direct border since the outer container handles it
+                                width: 2.0,
+                              ),
+                            ),
+                            onPressed: () {
+                              _showBottomSheetMenu(context);
+                              // Your onPressed logic here
+                            },
+                            child: Text(
+                              _selectedZone?.title ?? 'Select Zone',
+                              style: GoogleFonts.montserrat(
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -298,60 +324,66 @@ class _CustomizeTabState extends State<CustomizeTab> {
                     ),
                     Expanded(
                       child: Center(
-                        child: ColorPicker(
-                          size: 230,
-                          initialColor: selectedLED.color,
-                          initialBrightness: selectedLED.brightness,
-                          initialSaturation: selectedLED.saturation,
-                          whiteLight: isWhite,
-                          onBrightnessChanged: (brightness) {
-                            setState(() {
-                              if (_leds.length > _selectedLedIndex) {
-                                _leds[_selectedLedIndex] = selectedLED.copyWith(
-                                  brightness: brightness,
-                                );
-                              }
-                            });
-                          },
-                          onSaturationChanged: (saturation) {
-                            setState(() {
-                              if (_leds.length > _selectedLedIndex) {
-                                _leds[_selectedLedIndex] = selectedLED.copyWith(
-                                  saturation: saturation,
-                                );
-                              }
-                            });
-                          },
-                          onColorChanged: (color) {
-                            setState(() {
-                              if (_leds.length > _selectedLedIndex) {
-                                final newBrightness = color
-                                    .computeLuminance(); // Compute new brightness
-                                final newSaturation = HSVColor.fromColor(color)
-                                    .saturation; // Compute new saturation
-
-                                _leds[_selectedLedIndex] = selectedLED.copyWith(
-                                  color: color,
-                                  brightness: newBrightness,
-                                  saturation: newSaturation,
-                                );
-
-                                // Also call the brightness and saturation callbacks
-                                if (selectedLED.brightness != newBrightness) {
+                        child: SingleChildScrollView(
+                          child: ColorPicker(
+                            size: 230,
+                            initialColor: selectedLED.color,
+                            initialBrightness: selectedLED.brightness,
+                            initialSaturation: selectedLED.saturation,
+                            whiteLight: isWhite,
+                            onBrightnessChanged: (brightness) {
+                              setState(() {
+                                if (_leds.length > _selectedLedIndex) {
                                   _leds[_selectedLedIndex] =
                                       selectedLED.copyWith(
-                                    brightness: newBrightness,
+                                    brightness: brightness,
                                   );
                                 }
-                                if (selectedLED.saturation != newSaturation) {
+                              });
+                            },
+                            onSaturationChanged: (saturation) {
+                              setState(() {
+                                if (_leds.length > _selectedLedIndex) {
                                   _leds[_selectedLedIndex] =
                                       selectedLED.copyWith(
+                                    saturation: saturation,
+                                  );
+                                }
+                              });
+                            },
+                            onColorChanged: (color) {
+                              setState(() {
+                                if (_leds.length > _selectedLedIndex) {
+                                  final newBrightness = color
+                                      .computeLuminance(); // Compute new brightness
+                                  final newSaturation =
+                                      HSVColor.fromColor(color)
+                                          .saturation; // Compute new saturation
+
+                                  _leds[_selectedLedIndex] =
+                                      selectedLED.copyWith(
+                                    color: color,
+                                    brightness: newBrightness,
                                     saturation: newSaturation,
                                   );
+
+                                  // Also call the brightness and saturation callbacks
+                                  if (selectedLED.brightness != newBrightness) {
+                                    _leds[_selectedLedIndex] =
+                                        selectedLED.copyWith(
+                                      brightness: newBrightness,
+                                    );
+                                  }
+                                  if (selectedLED.saturation != newSaturation) {
+                                    _leds[_selectedLedIndex] =
+                                        selectedLED.copyWith(
+                                      saturation: newSaturation,
+                                    );
+                                  }
                                 }
-                              }
-                            });
-                          },
+                              });
+                            },
+                          ),
                         ),
                       ),
                     ),

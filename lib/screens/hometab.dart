@@ -45,12 +45,7 @@ class _HomeTabState extends State<HomeTab> {
       body: Stack(
         children: [
           // Background image
-          Positioned.fill(
-            child: Image.asset(
-              'assets/background.png', // Replace with your image path
-              fit: BoxFit.cover,
-            ),
-          ),
+          Positioned.fill(child: ColoredBox(color: Color(0xFF161616))),
           // Content overlay
           Column(
             children: [
@@ -177,7 +172,7 @@ class _HomeTabState extends State<HomeTab> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const AddControllerScreen(),
+                          builder: (context) => AddControllerScreen(),
                         ),
                       );
                     }),

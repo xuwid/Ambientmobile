@@ -173,11 +173,7 @@ class _TimezoneScreenState extends State<TimezoneScreen> {
                             Navigator.of(context).pop();
                           },
                         ),
-                        const Icon(
-                          Icons.alarm,
-                          color: Colors.white,
-                          size: 30,
-                        ),
+                        Image(image: AssetImage('assets/clock.png'), width: 28),
                         const SizedBox(width: 3),
                         Expanded(
                           child: Text(
