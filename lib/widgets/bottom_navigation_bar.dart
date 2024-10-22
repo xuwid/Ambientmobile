@@ -1,7 +1,6 @@
 // lib/widgets/bottom_navigation_bar.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ambient/utils/assets.dart';
 
 class CustomBottomNavigationBar extends StatelessWidget {
   final int selectedIndex;
@@ -18,63 +17,80 @@ class CustomBottomNavigationBar extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        BottomNavigationBar(
-          currentIndex: selectedIndex,
-          onTap: onItemTapped,
-          backgroundColor: Colors.black,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: const Color(0xFFBBBBBB),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Image(
-                image: AssetImage("assets/home_un.png"),
-                width: 25,
+        // Increase height using a Container around BottomNavigationBar
+        Container(
+          padding: const EdgeInsets.all(0),
+          color: Colors.transparent,
+          height: 90, // Increase height here
+          child: BottomNavigationBar(
+            currentIndex: selectedIndex,
+            onTap: onItemTapped,
+            backgroundColor: const Color(0xFF161616).withOpacity(0.98),
+            selectedItemColor: Colors.white,
+            unselectedItemColor: const Color(0xFFBBBBBB),
+            items: [
+              BottomNavigationBarItem(
+                icon: Image.asset(
+                  "assets/home_un.png",
+                  width: 25,
+                  color: selectedIndex == 0
+                      ? Colors.white
+                      : const Color(0xFFBBBBBB),
+                ),
+                label: 'Home',
               ),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Image(
-                image: AssetImage("assets/scenes_un.png"),
-                width: 25,
+              BottomNavigationBarItem(
+                icon: Image.asset(
+                  "assets/scenes_un.png",
+                  width: 25,
+                  color: selectedIndex == 1
+                      ? Colors.white
+                      : const Color(0xFFBBBBBB),
+                ),
+                label: 'Scenes',
               ),
-              label: 'Scenes',
-            ),
-            BottomNavigationBarItem(
-              icon: Image(
-                image: AssetImage("assets/customize_un.png"),
-                width: 25,
+              BottomNavigationBarItem(
+                icon: Image.asset(
+                  "assets/customize_un.png",
+                  width: 25,
+                  color: selectedIndex == 2
+                      ? Colors.white
+                      : const Color(0xFFBBBBBB),
+                ),
+                label: 'Customize',
               ),
-              label: 'Customize',
-            ),
-            BottomNavigationBarItem(
-              icon: Image(
-                image: AssetImage("assets/settings_un.png"),
-                width: 25,
+              BottomNavigationBarItem(
+                icon: Image.asset(
+                  "assets/settings_un.png",
+                  width: 25,
+                  color: selectedIndex == 3
+                      ? Colors.white
+                      : const Color(0xFFBBBBBB),
+                ),
+                label: 'Settings',
               ),
-              label: 'Settings',
+            ],
+            selectedLabelStyle: GoogleFonts.montserrat(
+              color: Colors.white,
             ),
-          ],
-          selectedLabelStyle: GoogleFonts.montserrat(
-            color: Colors.white,
+            unselectedLabelStyle: GoogleFonts.montserrat(
+              color: Colors.white,
+            ),
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            type: BottomNavigationBarType.fixed,
           ),
-          unselectedLabelStyle: GoogleFonts.montserrat(
-            color: Colors.white,
-          ),
-          showSelectedLabels: true,
-          showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
         ),
-        // Custom purple circular rectangle indicator
+        // Custom purple circular rectangle indicator positioned just above the bottom navigation bar
         Positioned(
-          bottom:
-              55, // Adjust the bottom position to place the indicator higher
+          bottom: 90, // Set to match the height of the BottomNavigationBar
           left: selectedIndex * (MediaQuery.of(context).size.width / 4) +
-              8, // Adjust position
+              27, // Adjust position
           child: Container(
-            width: MediaQuery.of(context).size.width / 4 -
+            width: MediaQuery.of(context).size.width / 7 -
                 16, // Adjust width to fit tab
             height:
-                8, // Adjust height for the top part of the circular rectangle
+                6, // Adjust height for the top part of the circular rectangle
             decoration: const BoxDecoration(
               color: Colors.purple,
               borderRadius: BorderRadius.only(

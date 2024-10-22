@@ -16,9 +16,9 @@ class ColorPickerApp extends StatelessWidget {
               initialBrightness: 1.0,
               initialSaturation: 1.0,
               initialColor: Colors.white,
-              onColorChanged: (color) {},
-              onBrightnessChanged: (value) {},
-              onSaturationChanged: (value) {},
+              onColorChanged: (color, brightness, sat) {},
+              onBrightnessChanged: (value, d, dd) {},
+              onSaturationChanged: (value, d, f) {},
               whiteLight: true),
         ),
       ),
@@ -31,9 +31,9 @@ class ColorPicker extends StatefulWidget {
   final Color initialColor;
   final double initialBrightness;
   final double initialSaturation;
-  final ValueChanged<Color> onColorChanged;
-  final ValueChanged<double> onBrightnessChanged;
-  final ValueChanged<double> onSaturationChanged;
+  final void Function(Color, double, double) onColorChanged;
+  final void Function(double, double, Color) onBrightnessChanged;
+  final void Function(double, Color, double) onSaturationChanged;
   final bool whiteLight;
 
   ColorPicker({
@@ -76,19 +76,19 @@ class _ColorPickerState extends State<ColorPicker> {
       brightness = 1.0;
       saturation = 1.0;
     });
-    widget.onColorChanged(selectedColor);
-    widget.onBrightnessChanged(brightness);
-    widget.onSaturationChanged(saturation);
+    widget.onColorChanged(selectedColor, brightness, saturation);
+    widget.onBrightnessChanged(brightness, saturation, selectedColor);
+    widget.onSaturationChanged(saturation, selectedColor, brightness);
   }
 
-  void _onColorChanged(Color color) {
+  void _onColorChanged(Color color, double brightness, double saturation) {
     setState(() {
       selectedColor = color;
     });
-    widget.onColorChanged(color);
+    widget.onColorChanged(color, brightness, saturation);
   }
 
-  void _onBrightnessChanged(double value) {
+  void _onBrightnessChanged(double value, Color color, double saturation) {
     setState(() {
       brightness = value;
       if (widget.whiteLight) {
@@ -100,17 +100,17 @@ class _ColorPickerState extends State<ColorPicker> {
             HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
       }
     });
-    widget.onBrightnessChanged(brightness);
+    widget.onBrightnessChanged(brightness, saturation, color);
   }
 
-  void _onSaturationChanged(double saturation) {
+  void _onSaturationChanged(double saturation, Color color, double brightness) {
     setState(() {
       this.saturation = saturation;
       selectedColor = HSLColor.fromColor(selectedColor)
           .withSaturation(saturation)
           .toColor();
     });
-    widget.onSaturationChanged(saturation);
+    widget.onSaturationChanged(saturation, color, brightness);
   }
 
   void _updateSelectorPosition(double angle) {
@@ -141,7 +141,7 @@ class _ColorPickerState extends State<ColorPicker> {
         selectedColor =
             HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
       }
-      widget.onColorChanged(selectedColor);
+      widget.onColorChanged(selectedColor, brightness, saturation);
       _updateSelectorPosition(angle);
     });
   }
@@ -155,7 +155,7 @@ class _ColorPickerState extends State<ColorPicker> {
         selectedColor =
             HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
       }
-      widget.onBrightnessChanged(value);
+      widget.onBrightnessChanged(value, saturation, selectedColor);
     });
   }
 
@@ -164,8 +164,8 @@ class _ColorPickerState extends State<ColorPicker> {
       saturation = value;
       selectedColor =
           HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
-      widget.onColorChanged(selectedColor);
-      widget.onSaturationChanged(value);
+      widget.onColorChanged(selectedColor, brightness, saturation);
+      widget.onSaturationChanged(value, selectedColor, brightness);
     });
   }
 

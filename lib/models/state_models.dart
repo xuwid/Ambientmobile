@@ -4,53 +4,102 @@ import 'package:ambient/widgets/color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:ambient/wirelessProtocol/mqtt.dart';
 
-class LED {
-  final int ledNumber;
-  final Color color;
-  final double brightness;
-  final double saturation;
+class Segments {
+  final int startindex;
+  final int endindex;
+  Segments({required this.startindex, required this.endindex});
 
-  LED({
-    required this.ledNumber,
-    required this.color,
-    required this.brightness,
-    required this.saturation,
-  });
-
-  LED copyWith({
-    Color? color,
-    double? brightness,
-    double? saturation,
-  }) {
-    return LED(
-      ledNumber: ledNumber,
-      color: color ?? this.color,
-      brightness: brightness ?? this.brightness,
-      saturation: saturation ?? this.saturation,
-    );
-  }
-
-  // Converts LED instance to a Map
   Map<String, dynamic> toMap() {
     return {
-      'ledNumber': ledNumber,
-      'color': color.value, // Converting Color to its integer value
-      'brightness': brightness,
-      'saturation': saturation,
+      'startindex': startindex,
+      'endindex': endindex,
     };
   }
 
-  // Creates LED instance from a Map
-  factory LED.fromMap(Map<String, dynamic> map) {
-    return LED(
-      ledNumber: map['ledNumber'],
-      color: Color(map['color']), // Converting integer value back to Color
+  //From map
+
+  factory Segments.fromMap(Map<String, dynamic> map) {
+    return Segments(startindex: map['startindex'], endindex: map['endindex']);
+  }
+}
+
+class Scene {
+  String name;
+  int patternID;
+  int speed;
+  int brightness;
+  int density;
+  List<int> colors;
+
+  Scene({
+    this.name = 'Scene 1',
+    this.patternID = 12,
+    this.speed = 95,
+    this.brightness = 255,
+    this.density = 255,
+    this.colors = const [],
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'patternID': patternID,
+      'speed': speed,
+      'brightness': brightness,
+      'density': density,
+      'colors': colors,
+    };
+  }
+
+  void setPatternID(int patternID) {
+    this.patternID = patternID;
+  }
+
+  void setSpeed(int speed) {
+    this.speed = speed;
+  }
+
+  void setBrightness(int brightness) {
+    this.brightness = brightness;
+  }
+
+  void setDensity(int density) {
+    this.density = density;
+  }
+
+  void setColors(List<int> colors) {
+    this.colors = colors;
+  }
+
+  void setName(String name) {
+    this.name = name;
+  }
+
+  factory Scene.fromMap(Map<String, dynamic> map) {
+    return Scene(
+      name: map['name'],
+      patternID: map['patternID'],
+      speed: map['speed'],
       brightness: map['brightness'],
-      saturation: map['saturation'],
+      density: map['density'],
+      colors: List<int>.from(map['colors']),
     );
   }
 }
+
+class LED {
+  Color color;
+  int index;
+
+  LED({
+    this.index = 0,
+    this.color = const Color(0xFF3EFF20),
+  });
+}
+// Converts LED instance to a Map
 
 class Effect {
   final String name;
@@ -74,44 +123,44 @@ class Effect {
   }
 }
 
-class Scene {
-  final String name;
-  Effect activatedEffects;
-  final List<LED> ledSettings;
-  final bool isActive;
+// class Scene {
+//   final String name;
+//   Effect activatedEffects;
+//   final List<LED> ledSettings;
+//   final bool isActive;
 
-  Scene({
-    this.activatedEffects = const Effect(),
-    this.isActive = false,
-    required this.name,
-    required this.ledSettings,
-  });
+//   Scene({
+//     this.activatedEffects = const Effect(),
+//     this.isActive = false,
+//     required this.name,
+//     required this.ledSettings,
+//   });
 
-  void setEffect(Effect effect) {
-    activatedEffects = effect;
-  }
+//   void setEffect(Effect effect) {
+//     activatedEffects = effect;
+//   }
 
-  // Converts Scene instance to a Map
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'activatedEffects': activatedEffects.toMap(),
-      'ledSettings': ledSettings.map((led) => led.toMap()).toList(),
-      'isActive': isActive,
-    };
-  }
+//   // Converts Scene instance to a Map
+//   Map<String, dynamic> toMap() {
+//     return {
+//       'name': name,
+//       'activatedEffects': activatedEffects.toMap(),
+//       'ledSettings': ledSettings.map((led) => led.toMap()).toList(),
+//       'isActive': isActive,
+//     };
+//   }
 
-  // Creates Scene instance from a Map
-  factory Scene.fromMap(Map<String, dynamic> map) {
-    return Scene(
-      name: map['name'],
-      activatedEffects: Effect.fromMap(map['activatedEffects']),
-      ledSettings: List<LED>.from(
-          map['ledSettings']?.map((led) => LED.fromMap(led)) ?? []),
-      isActive: map['isActive'],
-    );
-  }
-}
+//   // Creates Scene instance from a Map
+//   factory Scene.fromMap(Map<String, dynamic> map) {
+//     return Scene(
+//       name: map['name'],
+//       activatedEffects: Effect.fromMap(map['activatedEffects']),
+//       ledSettings: List<LED>.from(
+//           map['ledSettings']?.map((led) => LED.fromMap(led)) ?? []),
+//       isActive: map['isActive'],
+//     );
+//   }
+// }
 
 class Port {
   int startingValue;
@@ -147,211 +196,250 @@ class Port {
   }
 }
 
-class Zone {
-  static int _idCounter = 0; // Static counter for auto-incrementing IDs
-  final int id;
-  final String title;
-  final List<Port> ports;
-  final List<Scene> scenes;
-  List<LED> leds;
+// class Zone {
+//   static int _idCounter = 0; // Static counter for auto-incrementing IDs
+//   final int id;
+//   final String title;
+//   final List<Port> ports;
+//   final List<Scene> scenes;
+//   List<LED> leds;
 
-  Zone({
-    required this.title,
-    List<Port>? ports,
-    List<Scene>? scenes,
-    List<LED>? leds,
-    int ledCount = 15, // Default to 15 LEDs
-  })  : id = _idCounter++,
-        ports = ports ??
-            List.generate(
-                4,
-                (index) => Port(
-                    portNumber:
-                        index + 1)), // Initialize ports with portNumbers 1-4
-        scenes = scenes ?? [],
-        leds = leds ??
-            List.generate(
-              ledCount,
-              (index) => LED(
-                ledNumber: index + 1,
-                color: Colors.white,
-                brightness: 1.0,
-                saturation: 1.0,
-              ),
-            );
+//   Zone({
+//     required this.title,
+//     List<Port>? ports,
+//     List<Scene>? scenes,
+//     List<LED>? leds,
+//     int ledCount = 15, // Default to 15 LEDs
+//   })  : id = _idCounter++,
+//         ports = ports ??
+//             List.generate(
+//                 4,
+//                 (index) => Port(
+//                     portNumber:
+//                         index + 1)), // Initialize ports with portNumbers 1-4
+//         scenes = scenes ?? [],
+//         leds = leds ??
+//             List.generate(
+//               ledCount,
+//               (index) => LED(
+//                 ledNumber: index + 1,
+//                 color: Colors.white,
+//                 brightness: 1.0,
+//                 saturation: 1.0,
+//               ),
+//             );
 
-  // Convert a map to a Zone object
-  factory Zone.fromMap(Map<String, dynamic> map) {
-    return Zone(
-      title: map['title'],
-      ports: List<Port>.from(
-          map['ports']?.map((port) => Port.fromMap(port)) ?? []),
-      scenes: List<Scene>.from(
-          map['scenes']?.map((scene) => Scene.fromMap(scene)) ?? []),
-      leds: List<LED>.from(map['leds']?.map((led) => LED.fromMap(led)) ?? []),
-    );
-  }
+//   // Convert a map to a Zone object
+//   factory Zone.fromMap(Map<String, dynamic> map) {
+//     return Zone(
+//       title: map['title'],
+//       ports: List<Port>.from(
+//           map['ports']?.map((port) => Port.fromMap(port)) ?? []),
+//       scenes: List<Scene>.from(
+//           map['scenes']?.map((scene) => Scene.fromMap(scene)) ?? []),
+//       leds: List<LED>.from(map['leds']?.map((led) => LED.fromMap(led)) ?? []),
+//     );
+//   }
 
-  // Convert Zone object to map
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'ports': ports.map((p) => p.toMap()).toList(),
-      'scenes': scenes.map((s) => s.toMap()).toList(),
-      'leds': leds.map((l) => l.toMap()).toList(),
-    };
-  }
+//   // Convert Zone object to map
+//   Map<String, dynamic> toMap() {
+//     return {
+//       'id': id,
+//       'title': title,
+//       'ports': ports.map((p) => p.toMap()).toList(),
+//       'scenes': scenes.map((s) => s.toMap()).toList(),
+//       'leds': leds.map((l) => l.toMap()).toList(),
+//     };
+//   }
 
-  // Method to update port state
-  void updatePortState(int portNumber, bool isEnable) {
-    Port? port = ports.firstWhere((p) => p.portNumber == portNumber,
-        orElse: () => Port(portNumber: portNumber));
-    if (port != null) {
-      port.isEnable = isEnable;
-    }
-  }
+//   // Method to update port state
+//   void updatePortState(int portNumber, bool isEnable) {
+//     Port? port = ports.firstWhere((p) => p.portNumber == portNumber,
+//         orElse: () => Port(portNumber: portNumber));
+//     if (port != null) {
+//       port.isEnable = isEnable;
+//     }
+//   }
 
-  // Method to get port state
-  bool getPortState(int portNumber) {
-    Port? port = ports.firstWhere((p) => p.portNumber == portNumber,
-        orElse: () => Port(portNumber: portNumber));
-    return port.isEnable;
-  }
+//   // Method to get port state
+//   bool getPortState(int portNumber) {
+//     Port? port = ports.firstWhere((p) => p.portNumber == portNumber,
+//         orElse: () => Port(portNumber: portNumber));
+//     return port.isEnable;
+//   }
 
-  void addScene(Scene scene) {
-    scenes.add(scene);
-  }
+//   void addScene(Scene scene) {
+//     scenes.add(scene);
+//   }
 
-  // Method to set the number of LEDs
-  void setLedCount(int newCount) {
-    final currentCount = leds.length;
-    if (newCount > currentCount) {
-      // Add new LEDs
-      leds.addAll(
-        List.generate(
-          newCount - currentCount,
-          (index) => LED(
-            ledNumber: currentCount + index + 1,
-            color: Colors.white,
-            brightness: 1.0,
-            saturation: 1.0,
-          ),
-        ),
-      );
-    } else if (newCount < currentCount) {
-      // Remove excess LEDs
-      leds.removeRange(newCount, currentCount);
-    }
-  }
-}
+//   // Method to set the number of LEDs
+//   void setLedCount(int newCount) {
+//     final currentCount = leds.length;
+//     if (newCount > currentCount) {
+//       // Add new LEDs
+//       leds.addAll(
+//         List.generate(
+//           newCount - currentCount,
+//           (index) => LED(
+//             ledNumber: currentCount + index + 1,
+//             color: Colors.white,
+//             brightness: 1.0,
+//             saturation: 1.0,
+//           ),
+//         ),
+//       );
+//     } else if (newCount < currentCount) {
+//       // Remove excess LEDs
+//       leds.removeRange(newCount, currentCount);
+//     }
+//   }
+// }
 
 class Controller {
-  static int _idCounter = 0; // Static counter for auto-incrementing IDs
-  int id;
+  int? type;
+  String? id;
   final String name;
-  bool isActive;
+  BluetoothDevice? device; // Assuming device needs special handling
+  List<int>? portlength;
+  bool isActive = true;
 
-  Controller(this.name, {this.isActive = false}) : id = _idCounter++;
+  Controller(
+      {this.id,
+      required this.name,
+      this.device,
+      this.portlength,
+      this.type,
+      this.isActive = true});
 
-  // Factory constructor to create a Controller from Firestore document
-  factory Controller.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Controller.fromMap(data);
-  }
-
-  // Convert a map to a Controller object
-  factory Controller.fromMap(Map<String, dynamic> map) {
-    return Controller(
-      map['name'] as String,
-      isActive: map['isActive'] as bool? ?? false,
-    )..id = map['id'] as int; // Assign ID from the map
-  }
-
-  // Convert Controller object to map
+  // Method to update the controller's information
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
+      'portlength': portlength,
+      'type': type,
       'isActive': isActive,
     };
+  }
+
+  factory Controller.fromMap(Map<String, dynamic> map) {
+    return Controller(
+      id: map['id'],
+      name: map['name'],
+      portlength: List<int>.from(map['portlength'] ?? []),
+      isActive: map['isActive'],
+      type: map['type'],
+    );
+  }
+
+  factory Controller.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Controller.fromMap(data);
   }
 }
 
 class Area {
-  String? id; // Nullable ID field
-  late String title;
-  List<Controller> controller;
-  List<Zone> zones;
-  bool isActive;
+  String? id;
+  final String title;
+  Controller? controller;
+  List<Scene>? scenes;
+  List<Segments>? segments;
+  bool isActive = false;
+  List<bool>? ports = [false, false, false, false];
 
   Area({
-    this.id, // ID is optional here
+    this.id,
     required this.title,
-    List<Controller>? controller,
-    List<Zone>? zones,
+    this.controller,
+    this.scenes,
+    this.segments,
     this.isActive = false,
-  })  : controller = controller ?? [],
-        zones = zones ?? [];
+    this.ports,
+  });
 
-  Area copyWith({
-    String? id,
-    String? title,
-    List<Controller>? controller,
-    List<Zone>? zones,
-  }) {
-    return Area(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      controller: controller ?? this.controller,
-      zones: zones ?? this.zones,
-    );
-  }
-
-  factory Area.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Area(
-      id: doc.id, // Use Firestore's document ID
-      title: data['title'] ?? '',
-      isActive: data['isActive'] ?? false,
-      controller: List<Controller>.from(data['controllers']
-              ?.map((controller) => Controller.fromMap(controller)) ??
-          []),
-      zones: List<Zone>.from(
-          data['zones']?.map((zone) => Zone.fromMap(zone)) ?? []),
-    );
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'controller': controller?.toMap(),
+      'scenes': scenes?.map((scene) => scene.toMap()).toList(),
+      'segments': segments?.map((segment) => segment.toMap()).toList(),
+      'isActive': isActive,
+      'ports': ports,
+    };
   }
 
   factory Area.fromMap(Map<String, dynamic> map) {
     return Area(
-      id: map['id'], // ID may not be present in the map, handle accordingly
-      title: map['title'] ?? '',
+      id: map['id'],
+      title: map['title'],
+      controller: map['controller'] != null
+          ? Controller.fromMap(map['controller'])
+          : null,
+      scenes: List<Scene>.from(
+          map['scenes']?.map((scene) => Scene.fromMap(scene)) ?? []),
+      segments: List<Segments>.from(
+          map['segments']?.map((segment) => Segments.fromMap(segment)) ?? []),
+      ports: List<bool>.from(map['ports']?.map((port) => port as bool) ?? []),
       isActive: map['isActive'] ?? false,
-      controller: List<Controller>.from(map['controllers']
-              ?.map((controller) => Controller.fromMap(controller)) ??
-          []),
-      zones: List<Zone>.from(
-          map['zones']?.map((zone) => Zone.fromMap(zone)) ?? []),
     );
   }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id, // Include the ID in the map, even if it's null initially
-      'title': title,
-      'isActive': isActive,
-      'controllers': controller.map((c) => c.toMap()).toList(),
-      'zones': zones.map((z) => z.toMap()).toList(),
-    };
-  }
-
-  Zone? findZoneByTitle(String title) {
-    return zones.firstWhere((zone) => zone.title == title);
+  void setController(Controller controller) {
+    this.controller = controller;
   }
 }
 
 class HomeState with ChangeNotifier {
+  final MQTTService mqttService = MQTTService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late bool admin;
+  Future<void> _checkAdminStatus(HomeState homeState) async {
+    admin = await homeState.checkIfUserIsAdmin();
+    // You can use setState if you need to trigger a rebuild after this check
+  }
+
+  Future<bool> checkIfUserIsAdmin() async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) {
+        return false; // No user is logged in
+      }
+
+      final firestore = FirebaseFirestore.instance;
+      final userDoc =
+          await firestore.collection('users').doc(currentUserId).get();
+
+      // Check if the 'isAdmin' field exists and return its value
+      return userDoc.data()?['isAdmin'] ?? false;
+    } catch (e) {
+      print('Error checking admin status: $e');
+      return false; // Return false if there's an error
+    }
+  }
+
+// Pattern ID Definitions
+  int M_BLINK = 0;
+  int M_BLINK_MULTIPLE = 1;
+  int M_PULSE = 2;
+  int M_PULSE_MULTIPLE = 3;
+  int M_STATIC = 4;
+  int M_STATIC_MULTIPLE = 5;
+  int M_TWINKLE = 6;
+  int M_FIRE = 7;
+  int M_BPM = 8;
+  int M_CHASE = 9;
+  int M_GRADIENT_STATIC = 10;
+  int M_GRADIENT = 11;
+  int M_FAIRY_TWINKLE = 12;
+  int M_CHASE_FILL = 13;
+  int M_LIGHTNING = 14;
+  int M_METEOR = 15;
+  int M_METEOR_MULTIPLE = 16;
+  int M_RAINBOW = 17;
+  int M_WIPE = 18;
+  int M_WIPE_RANDOM = 19;
+  int M_SOLID_GLITTER = 20;
+  int M_PIXELS = 21;
   final List<String> events = [
     'Static',
     'Gradient',
@@ -368,38 +456,180 @@ class HomeState with ChangeNotifier {
     'Solid Glitter',
     'Wipe',
   ];
+  int convertEventToPatternId(String eventName) {
+    switch (eventName) {
+      case 'Static':
+        return M_STATIC;
+      case 'Gradient':
+        return M_GRADIENT;
+      case 'Twinklecat':
+        return M_TWINKLE;
+      case 'Fairytwinkle':
+        return M_FAIRY_TWINKLE;
+      case 'Colorwaves':
+        return M_GRADIENT; // Assuming it maps to M_GRADIENT
+      case 'Chase':
+        return M_CHASE;
+      case 'Breathe':
+        return M_PULSE; // Assuming it maps to M_PULSE
+      case 'Lightning':
+        return M_LIGHTNING;
+      case 'Meteor':
+        return M_METEOR;
+      case 'Multi Comet':
+        return M_METEOR_MULTIPLE; // Assuming it maps to M_METEOR_MULTIPLE
+      case 'Pixels':
+        return M_PIXELS;
+      case 'Rainbow':
+        return M_RAINBOW;
+      case 'Solid Glitter':
+        return M_SOLID_GLITTER;
+      case 'Wipe':
+        return M_WIPE;
+      default:
+        return -1; // Return -1 if event name is not found
+    }
+  }
 
   List<Controller> _controllers = [
-    Controller("Main"),
-    Controller("Pool House"),
+    Controller(
+        name: "Dummy Data",
+        portlength: [25, 72, 37, 44],
+        type: 12,
+        isActive: true),
+    Controller(name: "Main"),
+    Controller(name: "Pool House"),
   ];
 
   List<Controller> get controllers => _controllers;
-  Zone? _currentZone;
+  // Zone? _currentZone;
 
-  Zone? get currentZone => _currentZone;
+  // Zone? get currentZone => _currentZone;
 
   Area? _currentArea;
 
   List<Scene> get allScenes => _scenes;
+  Controller? _currentController;
 
+  String? currentNameYourArea;
+
+  String get currentAreaName => currentNameYourArea ?? 'Area';
+
+  List<Segments>? currentSegments;
+
+  List<Segments>? get currentSegmentsList => currentSegments;
+
+  Controller get currentController => _currentController!;
   // Getter for active areas
 
   Area? get currentArea => _currentArea;
-  List<Scene> get allScenesFromActivatedAreas {
-    List<Scene> scenes = [];
 
-    // Iterate through all areas and check if they are active
-    for (var area in areas.where((area) => area.isActive)) {
-      // For each active area, iterate through its zones
-      for (var zone in area.zones) {
-        // Add all scenes in the zone to the scenes list
-        scenes.addAll(zone.scenes);
+  void setCurrentArea(Area area) {
+    _currentArea = area;
+    notifyListeners();
+  }
+
+  void addScenetoCurrentArea(Scene scene) async {
+    if (_currentArea != null) {
+      // Add the scene to the current area in local state
+      _currentArea!.scenes ??= []; // Ensure the scenes list is initialized
+      _currentArea!.scenes!.add(scene);
+      notifyListeners();
+
+      // Get the current user's ID and the Firestore instance
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      final firestore = FirebaseFirestore.instance;
+
+      // Reference the document for the current area in Firestore
+      final areaDocRef = firestore
+          .collection('users')
+          .doc(currentUserId)
+          .collection('areas')
+          .doc(_currentArea!.id);
+
+      // Update Firestore with the new scene added
+      try {
+        await areaDocRef.update({
+          'scenes': FieldValue.arrayUnion([scene.toMap()]),
+        });
+        print('Scene added to Firestore for area: ${_currentArea!.id}');
+      } catch (e) {
+        print('Failed to add scene to Firestore: $e');
       }
     }
-
-    return scenes; // Return the collected scenes
   }
+
+  void removeControllerFromCurrentArea() {
+    if (_currentArea != null) {
+      _currentArea!.controller = null;
+      notifyListeners();
+    }
+  }
+
+  void setCurrentControllerPort(List<int> por) {
+    _currentController!.portlength = por;
+    notifyListeners();
+    print("Pors :");
+    print(por);
+  }
+
+  void addController(Controller controller) {
+    _controllers.add(controller);
+    notifyListeners(); // Notify listeners about the change
+  }
+
+  void setCurrentControllerType(int type) {
+    _currentController!.type = type;
+    notifyListeners(); // Notify listeners about the change
+  }
+
+  // Method to remove a controller and notify listeners of the change
+  void removeController(Controller controller) {
+    _controllers.remove(controller);
+    notifyListeners(); // Notify listeners about the change
+  }
+
+  void setCurrentControllerID(String id) {
+    _currentController =
+        _controllers.firstWhere((controller) => controller.id == id);
+    notifyListeners(); // Notify listeners about the change
+  }
+
+  // Method to set the current controller
+  void setCurrentController(Controller controller) {
+    _currentController = controller;
+    notifyListeners(); // Notify listeners about the change
+  }
+
+  void setCurrentNameYourArea(String name) {
+    currentNameYourArea = name;
+    notifyListeners();
+  }
+
+  // Method to update a controller's information (optional)
+  void updateController(Controller updatedController) {
+    int index = _controllers
+        .indexWhere((controller) => controller.id == updatedController.id);
+    if (index != -1) {
+      _controllers[index] = updatedController;
+      notifyListeners(); // Notify listeners about the change
+    }
+  }
+
+  // List<Scene> get allScenesFromActivatedAreas {
+  //   List<Scene> scenes = [];
+
+  //   // Iterate through all areas and check if they are active
+  //   for (var area in areas.where((area) => area.isActive)) {
+  //     // For each active area, iterate through its zones
+  //     for (var zone in area.zones) {
+  //       // Add all scenes in the zone to the scenes list
+  //       scenes.addAll(zone.scenes);
+  //     }
+  //   }
+
+  //   return scenes; // Return the collected scenes
+  // }
 
   // List<Scene> get allScenesFromActivatedAreas {
   //   List<Scene> scenes = [];
@@ -523,21 +753,7 @@ class HomeState with ChangeNotifier {
     notifyListeners(); // Notify listeners to rebuild the UI
   }
 
-  List<Area> _areas = [
-    Area(
-        title: "Roofline",
-        controller: [Controller("Main")],
-        isActive: true,
-        zones: [
-          Zone(title: "Zone 1", ports: [
-            Port(portNumber: 1, isEnable: true),
-            Port(portNumber: 2, isEnable: false),
-            Port(portNumber: 3, isEnable: false),
-            Port(portNumber: 4, isEnable: false),
-          ]),
-        ]),
-    Area(title: "Landscape Lights", controller: [Controller("Pool House")]),
-  ];
+  List<Area> _areas = [];
 
   String? _selectedTimezone;
   String? _selectedLocation;
@@ -550,38 +766,61 @@ class HomeState with ChangeNotifier {
 
 // Function to add a scene to a specific zone within the current area
 
-  Future<void> fetchScenes() async {
-    try {
-      final firestore = FirebaseFirestore.instance;
-      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  void addControllertoCurrentArea(Controller controller) {
+    if (_currentArea != null) {
+      _currentArea!.controller = controller;
+      notifyListeners();
+    }
+  }
 
+  Future<void> fetchScenesForActivatedAreas() async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
       if (currentUserId == null) {
-        print('No user is currently logged in.');
+        print('No user is logged in');
         return;
       }
 
-      // Get the areas collection for the current user
-      final areasCollection =
-          firestore.collection('users').doc(currentUserId).collection('areas');
+      final firestore = FirebaseFirestore.instance;
+      final userDoc = firestore.collection('users').doc(currentUserId);
 
-      // Query to get only active areas
-      final areasSnapshot =
-          await areasCollection.where('isActive', isEqualTo: true).get();
+      // Fetch all areas where the area is activated
+      final areasSnapshot = await userDoc
+          .collection('areas')
+          .where('isActive',
+              isEqualTo:
+                  true) // Assuming there's an 'isActivated' field in the area documents
+          .get();
 
-      // Extract scenes from active areas
+      if (areasSnapshot.docs.isEmpty) {
+        print('No activated areas found.');
+        return;
+      }
+
       List<Scene> fetchedScenes = [];
+
+      // Loop through each activated area and fetch the scenes
       for (var areaDoc in areasSnapshot.docs) {
-        final area = Area.fromFirestore(areaDoc);
-        for (var zone in area.zones) {
-          fetchedScenes.addAll(zone.scenes);
+        final data = areaDoc.data();
+        List<dynamic>? scenesData = data['scenes'] as List<dynamic>?;
+
+        if (scenesData != null && scenesData.isNotEmpty) {
+          List<Scene> scenes = scenesData.map((sceneData) {
+            return Scene.fromMap(
+                sceneData); // Assuming you have a fromMap method in your Scene class
+          }).toList();
+
+          fetchedScenes.addAll(scenes);
         }
       }
 
+      // Update the local state with fetched scenes
       _scenes = fetchedScenes;
-      notifyListeners();
-      print('Scenes fetched successfully.');
-    } catch (error) {
-      print('Failed to fetch scenes from Firestore: $error');
+      notifyListeners(); // Notify any listeners about the state update
+
+      print('Fetched ${_scenes.length} scenes from activated areas.');
+    } catch (e) {
+      print('Error fetching scenes from activated areas: $e');
     }
   }
 
@@ -604,46 +843,46 @@ class HomeState with ChangeNotifier {
       final areasSnapshot = await areasCollection.get();
 
       // Find the area containing the zone
-      final areaDoc = areasSnapshot.docs.firstWhere(
-        (doc) {
-          final area = Area.fromFirestore(doc);
-          return area.zones.any((zone) => zone.title == zoneTitle);
-        },
-        orElse: () => throw Exception('Area not found'),
-      );
+      //final areaDoc = areasSnapshot.docs.firstWhere(
+      // (doc) {
+      // final area = Area.fromFirestore(doc);
+      //   return area.zones.any((zone) => zone.title == zoneTitle);
+      // },
+      //  orElse: () => throw Exception('Area not found'),
+      // );
 
-      final area = Area.fromFirestore(areaDoc);
+      //final area = Area.fromFirestore(areaDoc);
 
       // Find the specific zone in the area
-      final zone = area.zones.firstWhere(
-        (zone) => zone.title == zoneTitle,
-        orElse: () => throw Exception('Zone not found'),
-      );
+      //final zone = area.zones.firstWhere(
+      // (zone) => zone.title == zoneTitle,
+      // orElse: () => throw Exception('Zone not found'),
+      //);
 
       // Add the scene to the zone locally
       // zone.scenes.add(scene);
       // notifyListeners(); // Notify listeners if applicable
 
       // Reference to the area document
-      final areaRef = areasCollection.doc(area.id);
+      // final areaRef = areasCollection.doc(area.id);
 
-      // Update the zone in the list of zones within the area document
-      final updatedZones = area.zones.map((z) {
-        if (z.title == zoneTitle) {
-          // Update the specific zone with the new scene
-          return Zone(
-            // id: z.id, // Ensure you maintain the zone's ID
-            title: z.title,
-            ports: z.ports,
-            scenes: [...z.scenes, scene], // Add the new scene
-          );
-        }
-        return z;
-      }).toList();
+      // // Update the zone in the list of zones within the area document
+      // final updatedZones = area.zones.map((z) {
+      //   if (z.title == zoneTitle) {
+      //     // Update the specific zone with the new scene
+      //     return Zone(
+      //       // id: z.id, // Ensure you maintain the zone's ID
+      //       title: z.title,
+      //       ports: z.ports,
+      //       scenes: [...z.scenes, scene], // Add the new scene
+      //     );
+      //   }
+      //   return z;
+      // }).toList();
 
-      await areaRef.update({
-        'zones': updatedZones.map((z) => z.toMap()).toList(),
-      });
+      //   await areaRef.update({
+      //    'zones': updatedZones.map((z) => z.toMap()).toList(),
+      //     });
 
       print('Scene added to zone and updated in Firestore.');
     } catch (error) {
@@ -652,10 +891,10 @@ class HomeState with ChangeNotifier {
   }
 
   // Add a scene to the list
-  void addScenetoZone(Zone zone, Scene scene) {
-    zone.scenes.add(scene);
-    notifyListeners();
-  }
+  // void addScenetoZone(Zone zone, Scene scene) {
+  //   zone.scenes.add(scene);
+  //   notifyListeners();
+  // }
 
   void addScene(Scene scene) {
     _scenes.add(scene);
@@ -718,19 +957,6 @@ class HomeState with ChangeNotifier {
     }
   }
 
-  Zone? findZoneByTitle(String title) {
-    for (var area in _areas) {
-      if (area.isActive) {
-        for (var zone in area.zones) {
-          if (zone.title == title) {
-            return zone;
-          }
-        }
-      }
-    }
-    return null;
-  }
-
   List<String> savedScenes = [
     'Scene 1',
     'Scene 2',
@@ -739,94 +965,207 @@ class HomeState with ChangeNotifier {
   String? activeScene; // Store the active scene
 
   // Method to set the active scene
-  void setActiveScene(Scene? scene) {
-    activeScene = scene?.name; // Set the active scene to the scene's name
-    notifyListeners(); // Notify listeners of the change
+  Future<void> setActiveScene(Scene? scene) async {
+    if (scene == null) {
+      activeScene = null;
+      notifyListeners();
+      print('Error: Scene is null.');
+      return;
+    }
+    activeScene = scene.name;
+    notifyListeners();
+    // Ensure MQTT connection is established
+    await mqttService.connect();
+
+    try {
+      // Find the active area containing the scene
+      final area = _areas.firstWhere(
+        (area) => area.scenes!.any((s) => s.name == scene.name),
+        // orElse: () => null,
+      );
+
+      // Check if the area and its controller exist
+      if (area != null && area.controller != null) {
+        final controller = area.controller!;
+        final controllerId = controller.id ?? 'malaiks';
+
+        // Prepare the JSON payload
+        Map<String, dynamic> jsonMessage = {
+          "a": "activate",
+          "portlength":
+              controller.portlength ?? [], // Controller's port lengths
+          "seg":
+              area.segments?.map((s) => [s.startindex, s.endindex]).toList() ??
+                  [], // Area's segments
+          "scene": {
+            "ports": area.ports, // Scene's port booleans
+            "patternId": scene.patternID,
+            "colors": scene.colors ?? [],
+            "speed": scene.speed ?? 0,
+            "brightness": scene.brightness ?? 0,
+            "density": scene.density ?? 0,
+          },
+        };
+
+        // Publish the JSON message to the controller's topic (controller ID)
+        mqttService.publishJsonToTopic(controllerId, jsonMessage);
+
+        // Update the active scene in the local state
+
+        print(
+            'Scene "${scene.name}" activated and message sent to topic "$controllerId".');
+      } else {
+        print(
+            'Error: No active area found with the given scene, or area has no controller.');
+      }
+    } catch (e) {
+      print('Error while activating scene: $e');
+    }
+  }
+
+  Future<void> setActiveSceneAdmin(Scene? scene) async {
+    if (scene == null) {
+      print('Error: Scene is null.');
+      return;
+    }
+    activeScene = scene.name;
+    notifyListeners();
+
+    // Ensure MQTT connection is established
+    await mqttService.connect();
+
+    try {
+      // Filter active areas (areas where isActive is true)
+      final activeAreas =
+          _areas.where((area) => area.isActive == true).toList();
+
+      if (activeAreas.isEmpty) {
+        print('Error: No active area found.');
+        return;
+      }
+
+      for (var area in activeAreas) {
+        // Ensure the area has a controller
+        if (area.controller != null) {
+          final controller = area.controller!;
+          final controllerId = controller.id ?? 'malaiks';
+
+          // Prepare the JSON payload
+          Map<String, dynamic> jsonMessage = {
+            "a": "activate",
+            "portlength":
+                controller.portlength ?? [], // Controller's port lengths
+            "seg": area.segments
+                    ?.map((s) => [s.startindex, s.endindex])
+                    .toList() ??
+                [], // Area's segments
+            "scene": {
+              "ports": area.ports, // Scene's port booleans
+              "patternId": scene.patternID,
+              "colors": scene.colors ?? [],
+              "speed": scene.speed ?? 0,
+              "brightness": scene.brightness ?? 0,
+              "density": scene.density ?? 0,
+            },
+          };
+
+          // Publish the JSON message to the controller's topic (controller ID)
+          mqttService.publishJsonToTopic(controllerId, jsonMessage);
+
+          print(
+              'Scene "${scene.name}" activated for area "${area.title}" and message sent to topic "$controllerId".');
+        } else {
+          print('Error: Area "${area.title}" has no controller.');
+        }
+      }
+    } catch (e) {
+      print('Error while activating scene: $e');
+    }
   }
 
   void removeZoneFromCurrentArea(String title) {
     if (_currentArea != null) {
-      _currentArea!.zones.removeWhere((zone) => zone.title == title);
+      //    _currentArea!.zones.removeWhere((zone) => zone.title == title);
       notifyListeners();
     }
   }
 
   Future<void> removeZoneFromCurrentAreaByIndex(int index) async {
-    if (_currentArea != null &&
-        index >= 0 &&
-        index < _currentArea!.zones.length) {
-      final zoneToRemove = _currentArea!.zones[index];
-      print('Removing Zone: ${zoneToRemove.title}');
+    // if (_currentArea != null &&
+    //     index >= 0 &&
+    //     index < _currentArea!.zones.length) {
+    //   final zoneToRemove = _currentArea!.zones[index];
+    //   print('Removing Zone: ${zoneToRemove.title}');
 
-      // Remove the zone from the current area
-      _currentArea!.zones.removeAt(index);
+    //   // Remove the zone from the current area
+    //   _currentArea!.zones.removeAt(index);
 
-      // Update the current area in Firestore
-      try {
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-        if (currentUserId == null) throw Exception('No user logged in');
+    //   // Update the current area in Firestore
+    //   try {
+    //     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    //     if (currentUserId == null) throw Exception('No user logged in');
 
-        await _firestore
-            .collection('users')
-            .doc(currentUserId)
-            .collection('areas')
-            .doc(_currentArea!.id) // Use the current area's ID
-            .update({
-          'zones': _currentArea!.zones.map((z) => z.toMap()).toList(),
-        }).then((_) {
-          print('Zone removed from area in Firestore');
-        }).catchError((error) {
-          print('Failed to update area with removed zone in Firestore: $error');
-        });
+    //     await _firestore
+    //         .collection('users')
+    //         .doc(currentUserId)
+    //         .collection('areas')
+    //         .doc(_currentArea!.id) // Use the current area's ID
+    //         .update({
+    //       'zones': _currentArea!.zones.map((z) => z.toMap()).toList(),
+    //     }).then((_) {
+    //       print('Zone removed from area in Firestore');
+    //     }).catchError((error) {
+    //       print('Failed to update area with removed zone in Firestore: $error');
+    //     });
 
-        // Notify listeners to update UI
-        notifyListeners();
-      } catch (e) {
-        print('Error removing zone: $e');
-      }
-    } else {
-      print('Error: No current area selected or index out of range.');
-    }
+    //     // Notify listeners to update UI
+    //     notifyListeners();
+    //   } catch (e) {
+    //     print('Error removing zone: $e');
+    //   }
+    // } else {
+    //   print('Error: No current area selected or index out of range.');
+    // }
   }
 
   void updateCurrentAreaBasedOnZoneTitle(String zoneTitle) {
-    for (var area in _areas) {
-      if (area.zones.any((zone) => zone.title == zoneTitle)) {
-        _currentArea = area;
-        print('Current Area: ${_currentArea!.title}');
-        notifyListeners();
-        return;
-      }
-    }
+    // for (var area in _areas) {
+    //   if (area.zones.any((zone) => zone.title == zoneTitle)) {
+    //     _currentArea = area;
+    //     print('Current Area: ${_currentArea!.title}');
+    //     notifyListeners();
+    //     return;
+    //   }
+    // }
   }
 
   void updateCurrentZoneBasedOnZoneTitle(String zoneTitle) {
-    for (var area in _areas) {
-      for (var zone in area.zones) {
-        if (zone.title == zoneTitle) {
-          _currentZone = zone;
-          print('Current Zone: ${_currentZone!.title}');
-          notifyListeners();
-          return;
-        }
-      }
-    }
+    // for (var area in _areas) {
+    //   for (var zone in area.zones) {
+    //     if (zone.title == zoneTitle) {
+    //       _currentZone = zone;
+    //       print('Current Zone: ${_currentZone!.title}');
+    //       notifyListeners();
+    //       return;
+    //     }
+    //   }
+    // }
   }
 
-  void updateZone(Zone updatedZone) {
-    if (_currentArea != null) {
-      final zoneIndex = _currentArea!.zones.indexWhere(
-        (zone) => zone.id == updatedZone.id,
-      );
+  ////// void updateZone(Zone updatedZone) {
+  // if (_currentArea != null) {
+  //   final zoneIndex = _currentArea!.zones.indexWhere(
+  //     (zone) => zone.id == updatedZone.id,
+  //   );
 
-      if (zoneIndex != -1) {
-        _currentArea!.zones[zoneIndex] = updatedZone;
-      } else {
-        _currentArea!.zones.add(updatedZone);
-      }
-      notifyListeners();
-    }
-  }
+  //   if (zoneIndex != -1) {
+  //     _currentArea!.zones[zoneIndex] = updatedZone;
+  //   } else {
+  //     _currentArea!.zones.add(updatedZone);
+  //   }
+  //   notifyListeners();
+  // }
+//  }
 
   void setSelectedTimezone(String? timezone) async {
     _selectedTimezone = timezone;
@@ -871,19 +1210,21 @@ class HomeState with ChangeNotifier {
     if (_currentArea != null) {
       try {
         // Add controller to the local list
-        _currentArea!.controller.add(controller);
+        addControllertoCurrentArea(controller);
 
         // Update Firestore
         final currentUserId = FirebaseAuth.instance.currentUser?.uid;
         if (currentUserId == null) throw Exception('No user logged in');
-
+        if (_currentArea!.controller == null) {
+          _currentArea!.controller = controller;
+        }
         await _firestore
             .collection('users')
             .doc(currentUserId)
             .collection('areas')
             .doc(_currentArea!.id) // Use the current area's ID
             .update({
-          'controllers': _currentArea!.controller.map((c) => c.toMap()).toList()
+          'controllers': controllers.map((c) => c.toMap()).toList()
         }).then((_) {
           print('Controller added to Firestore');
         }).catchError((error) {
@@ -905,7 +1246,7 @@ class HomeState with ChangeNotifier {
     if (_currentArea != null) {
       try {
         // Remove controller from the local list
-        _currentArea!.controller.removeWhere((c) => c.id == controller.id);
+        _currentArea!.controller = null;
 
         // Update Firestore
         final currentUserId = FirebaseAuth.instance.currentUser?.uid;
@@ -917,7 +1258,7 @@ class HomeState with ChangeNotifier {
             .collection('areas')
             .doc(_currentArea!.id) // Use the current area's ID
             .update({
-          'controllers': _currentArea!.controller.map((c) => c.toMap()).toList()
+          'controllers': controllers.map((c) => c.toMap()).toList()
         }).then((_) {
           print('Controller removed from Firestore');
         }).catchError((error) {
@@ -934,22 +1275,64 @@ class HomeState with ChangeNotifier {
     }
   }
 
+  void addSceneToCurrentArea(Scene scene) async {
+    if (_currentArea != null) {
+      // Initialize the scenes list if it's null
+      _currentArea!.scenes ??= [];
+
+      // Add the new scene to the local area
+      _currentArea!.scenes!.add(scene);
+
+      // Update Firestore
+      try {
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        final firestore = FirebaseFirestore.instance;
+        final userDoc = firestore.collection('users').doc(currentUserId);
+        final areaRef = userDoc
+            .collection('areas')
+            .doc(_currentArea!.id); // Get reference to the current area
+
+        // Update the scenes in Firestore
+        await areaRef.update({
+          'scenes': FieldValue.arrayUnion(
+              [scene.toMap()]), // Assuming scene has a toMap method
+        });
+
+        print('Scene added to area in Firestore');
+        notifyListeners(); // Notify listeners of the change
+      } catch (e) {
+        print('Failed to add scene to area in Firestore: $e');
+      }
+    }
+  }
+
   void createArea(String title,
-      {List<Controller>? controllers, List<Zone>? zones}) async {
+      {Controller? controller,
+      List<bool>? ports,
+      List<Segments>? segments,
+      List<Scene>? scenes}) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     final firestore = FirebaseFirestore.instance;
     final userDoc = firestore.collection('users').doc(currentUserId);
 
+    // Print statements to debug the incoming parameters
+    print('Title: $title');
+    print('Ports: $ports');
+    print('Controller: ${controller?.name}');
+    print('Segments: ${segments?.map((s) => s.startindex).toList()}');
+    print('Scenes: ${scenes?.length}');
+
     // Generate a new document reference with an auto-generated ID
-    final newAreaRef =
-        userDoc.collection('areas').doc(); // Automatically generates a new ID
+    final newAreaRef = userDoc.collection('areas').doc();
 
     // Create an Area instance with the generated ID
     final newArea = Area(
       id: newAreaRef.id, // Set the ID
       title: title,
-      controller: controllers ?? [],
-      zones: zones ?? [],
+      ports: ports,
+      controller: controller,
+      segments: segments,
+      scenes: scenes,
     );
 
     try {
@@ -966,108 +1349,121 @@ class HomeState with ChangeNotifier {
     }
   }
 
-  Future<void> addTitleToArea(String newTitle) async {
-    if (_currentArea != null) {
-      try {
-        // Update the title of the current area in Firestore
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-        if (currentUserId == null) throw Exception('No user logged in');
-
-        // Update Firestore document
-        await _firestore
-            .collection('users')
-            .doc(currentUserId)
-            .collection('areas')
-            .doc(_currentArea!.id) // Use the current area's ID
-            .update({'title': newTitle}).then((_) {
-          print('Area title updated in Firestore');
-        }).catchError((error) {
-          print('Failed to update area title in Firestore: $error');
-        });
-
-        // Update the title in the local area object
-        _currentArea!.title = newTitle;
-
-        // Update the local list of areas
-        int index = _areas.indexWhere((area) => area.id == _currentArea!.id);
-        if (index != -1) {
-          _areas[index] = _currentArea!;
-        }
-
-        // Notify listeners to update UI
-        notifyListeners();
-      } catch (e) {
-        print('Error updating area title: $e');
-      }
-    } else {
-      print('No current area selected');
-    }
+  void updateArea(String id, List<Segments> seg, List<bool> ports) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final firestore = FirebaseFirestore.instance;
+    final userDoc = firestore.collection('users').doc(currentUserId);
+    final areaRef = userDoc.collection('areas').doc(id);
+    areaRef.update({
+      'segments': seg.map((s) => s.toMap()).toList(),
+      'ports': ports,
+    }).then((_) {
+      print('Area updated in Firestore');
+    }).catchError((error) {
+      print('Failed to update area in Firestore: $error');
+    });
   }
 
-  Future<void> addZoneToCurrentArea(Zone zone) async {
-    if (_currentArea != null) {
-      print('Adding Zone: ${zone.title}');
+  // Future<void> addTitleToArea(String newTitle) async {
+  //   if (_currentArea != null) {
+  //     try {
+  //       // Update the title of the current area in Firestore
+  //       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  //       if (currentUserId == null) throw Exception('No user logged in');
 
-      // Initialize a list with 4 empty Port objects representing the ports
-      final List<Port> ports = List<Port>.generate(
-          4,
-          (index) => Port(
-              portNumber:
-                  index + 1)); // Correctly initialize with portNumbers 1-4
+  //       // Update Firestore document
+  //       await _firestore
+  //           .collection('users')
+  //           .doc(currentUserId)
+  //           .collection('areas')
+  //           .doc(_currentArea!.id) // Use the current area's ID
+  //           .update({'title': newTitle}).then((_) {
+  //         print('Area title updated in Firestore');
+  //       }).catchError((error) {
+  //         print('Failed to update area title in Firestore: $error');
+  //       });
 
-      // Set only the port at the correct index if it matches portNumber
-      for (var port in zone.ports) {
-        if (port.portNumber > 0 && port.portNumber <= 4) {
-          // Adjust for 0-based index in the list
-          int index = port.portNumber - 1; // Convert to 0-based index
-          ports[index] = Port(
-            startingValue: port.startingValue,
-            endingValue: port.endingValue,
-            portNumber: port.portNumber,
-            isEnable: port.isEnable, // Reflect the current enabled state
-          );
-        }
-      }
+  //       // Update the title in the local area object
 
-      // Replace the ports in the zone with the updated ports
-      zone.ports.clear();
-      zone.ports.addAll(ports);
+  //       _currentArea = _currentArea!.copyWith(title: newTitle);
+  //       // Update the local list of areas
+  //       int index = _areas.indexWhere((area) => area.id == _currentArea!.id);
+  //       if (index != -1) {
+  //         _areas[index] = _currentArea!;
+  //       }
 
-      // Add the new zone to the current area with the updated ports
-      _currentArea!.zones.add(zone);
+  //       // Notify listeners to update UI
+  //       notifyListeners();
+  //     } catch (e) {
+  //       print('Error updating area title: $e');
+  //     }
+  //   } else {
+  //     print('No current area selected');
+  //   }
+  // }
 
-      // Update the current area in Firestore
-      try {
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-        if (currentUserId == null) throw Exception('No user logged in');
+  // Future<void> addZoneToCurrentArea(Zone zone) async {
+  //   if (_currentArea != null) {
+  //     print('Adding Zone: ${zone.title}');
 
-        await _firestore
-            .collection('users')
-            .doc(currentUserId)
-            .collection('areas')
-            .doc(_currentArea!.id) // Use the current area's ID
-            .update({
-          'zones': _currentArea!.zones.map((z) => z.toMap()).toList(),
-        }).then((_) {
-          print('Zone added to area in Firestore');
-        }).catchError((error) {
-          print('Failed to update area with new zone in Firestore: $error');
-        });
+  //     // Initialize a list with 4 empty Port objects representing the ports
+  //     final List<Port> ports = List<Port>.generate(
+  //         4,
+  //         (index) => Port(
+  //             portNumber:
+  //                 index + 1)); // Correctly initialize with portNumbers 1-4
 
-        // Notify listeners to update UI
-        notifyListeners();
+  //     // Set only the port at the correct index if it matches portNumber
+  //     for (var port in zone.ports) {
+  //       if (port.portNumber > 0 && port.portNumber <= 4) {
+  //         // Adjust for 0-based index in the list
+  //         int index = port.portNumber - 1; // Convert to 0-based index
+  //         ports[index] = Port(
+  //           startingValue: port.startingValue,
+  //           endingValue: port.endingValue,
+  //           portNumber: port.portNumber,
+  //           isEnable: port.isEnable, // Reflect the current enabled state
+  //         );
+  //       }
+  //     }
 
-        // Print the states of the ports for debugging purposes
-        ports.forEach((port) {
-          print('Port ${port.portNumber}: ${port.isEnable}');
-        });
-      } catch (e) {
-        print('Error adding zone: $e');
-      }
-    } else {
-      print('Error: No current area selected.');
-    }
-  }
+  //     // Replace the ports in the zone with the updated ports
+  //     zone.ports.clear();
+  //     zone.ports.addAll(ports);
+
+  //     // Add the new zone to the current area with the updated ports
+  //     //   _currentArea!.zones.add(zone);
+
+  //     // Update the current area in Firestore
+  //     try {
+  //       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  //       if (currentUserId == null) throw Exception('No user logged in');
+
+  //       await _firestore
+  //           .collection('users')
+  //           .doc(currentUserId)
+  //           .collection('areas')
+  //           .doc(_currentArea!.id) // Use the current area's ID
+  //           .update({}).then((_) {
+  //         print('Zone added to area in Firestore');
+  //       }).catchError((error) {
+  //         print('Failed to update area with new zone in Firestore: $error');
+  //       });
+
+  //       // Notify listeners to update UI
+  //       notifyListeners();
+
+  //       // Print the states of the ports for debugging purposes
+  //       ports.forEach((port) {
+  //         print('Port ${port.portNumber}: ${port.isEnable}');
+  //       });
+  //     } catch (e) {
+  //       print('Error adding zone: $e');
+  //     }
+  //   } else {
+  //     print('Error: No current area selected.');
+  //   }
+  // }
 
   void toggleController(String name) {
     final controller = _controllers.firstWhere((c) => c.name == name);
@@ -1088,7 +1484,7 @@ class HomeState with ChangeNotifier {
       try {
         // Update local state
         area.isActive = isActive;
-
+        notifyListeners();
         // Update Firestore
         final currentUserId = FirebaseAuth.instance.currentUser?.uid;
         if (currentUserId == null) throw Exception('No user logged in');
@@ -1105,27 +1501,26 @@ class HomeState with ChangeNotifier {
         });
 
         // Notify listeners to update UI
-        notifyListeners();
       } catch (e) {
         print('Error toggling area: $e');
       }
     }
   }
 
-  void addArea(String title,
-      {List<Controller>? controller, List<Zone>? zones}) {
-    _currentArea = Area(title: title, controller: controller, zones: zones);
+  void addArea(String title, {Controller? controller}) {
+    _currentArea = Area(title: title, controller: controller);
     _areas.add(_currentArea!);
     notifyListeners();
   }
 
-  void addControllersToCurrentArea(List<Controller> controllers) {
-    if (_currentArea != null) {
-      _currentArea!.controller.addAll(controllers);
-      print('Adding controllers to ${_currentArea!.title}');
-      print('Controllers: ${controllers.map((c) => c.name).toList()}');
-      notifyListeners();
-    }
-    print('Current Area is null');
-  }
+//   void addControllersToCurrentArea(List<Controller> controllers) {
+//     if (_currentArea != null) {
+//       _currentArea!.controller.addAll(controllers);
+//       print('Adding controllers to ${_currentArea!.title}');
+//       print('Controllers: ${controllers.map((c) => c.name).toList()}');
+//       notifyListeners();
+//     }
+//     print('Current Area is null');
+//   }
+// }
 }

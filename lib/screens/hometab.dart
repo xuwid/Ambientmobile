@@ -19,6 +19,7 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   late final User? currentUser; // Use late initialization
+  late bool admin = false;
 
   @override
   void initState() {
@@ -31,10 +32,18 @@ class _HomeTabState extends State<HomeTab> {
       // Fetch areas for the current user when the widget is initialized
       final homeState = Provider.of<HomeState>(context, listen: false);
       homeState.getAreasForUser(currentUser!.uid);
+      _checkAdminStatus(homeState);
+      // _checkAdminStatus(homeState);
     } else {
       // Handle the case where there is no current user
       // For example, you might want to show a login screen or an error message
     }
+  }
+
+  Future<void> _checkAdminStatus(HomeState homeState) async {
+    admin = await homeState.checkIfUserIsAdmin();
+    // You can use setState if you need to trigger a rebuild after this check
+    setState(() {});
   }
 
   @override
@@ -54,7 +63,7 @@ class _HomeTabState extends State<HomeTab> {
                 child: AppBar(
                   automaticallyImplyLeading: false,
                   title: Text(
-                    'Home',
+                    admin ? 'Admin' : 'Home',
                     style: GoogleFonts.montserrat(
                       color: Colors.white,
                       fontSize: 32,
@@ -159,9 +168,6 @@ class _HomeTabState extends State<HomeTab> {
                         context,
                         MaterialPageRoute(
                           builder: (context) {
-                            HomeState homeState =
-                                Provider.of<HomeState>(context, listen: false);
-                            homeState.createArea('');
                             return const SelectControllerScreen();
                           },
                         ),
@@ -172,7 +178,7 @@ class _HomeTabState extends State<HomeTab> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => AddControllerScreen(),
+                          builder: (context) => const AddControllerScreen(),
                         ),
                       );
                     }),

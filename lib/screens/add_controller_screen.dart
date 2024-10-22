@@ -1,4 +1,5 @@
 import 'package:ambient/screens/controller_configure.dart';
+import 'package:ambient/screens/controller_port.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ambient/widgets/background_widget.dart';
@@ -6,8 +7,8 @@ import 'package:ambient/widgets/loading_indicator.dart'; // Your circular loadin
 import 'package:flutter_blue_plus/flutter_blue_plus.dart'; // flutter_blue for BLE scanning
 import 'package:permission_handler/permission_handler.dart'; // permission_handler for requesting Bluetooth permissions
 import 'dart:convert';
-import 'package:provider/provider.dart'; // Provider for state management
-import 'package:ambient/models/model.dart'; // Your model
+import 'package:ambient/models/state_models.dart'; // Your model
+import 'package:provider/provider.dart';
 
 class AddControllerScreen extends StatefulWidget {
   const AddControllerScreen({Key? key}) : super(key: key);
@@ -80,6 +81,11 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
         }
       }
     });
+    controllerList.add(Controller(
+      name: "Dummy Controller",
+    ));
+
+    //Remove this when deployment
   }
 
   @override
@@ -144,12 +150,14 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
               child: Center(
                 child: isScanning
                     ? CircularLoadingIndicator() // Display the loading indicator during scan
-                    : devicesList.isEmpty
+                    : controllerList.isEmpty
                         ? const Text(
                             'No devices found',
                             style: TextStyle(color: Colors.white),
                           )
                         : ListView.builder(
+                            //Make the contrllerList equal to the devicesList
+
                             itemCount: controllerList.length,
                             itemBuilder: (context, index) {
                               return Padding(
@@ -158,38 +166,54 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
                                   color: const Color.fromARGB(255, 66, 64, 64)
                                       .withOpacity(0.9),
                                   child: ListTile(
-                                    title: Text(
-                                      controllerList[index]
-                                              .device!
-                                              .advName
-                                              .isNotEmpty
-                                          ? controllerList[index]
-                                              .device!
-                                              .advName
-                                          : 'Unknown Device',
-                                      style:
-                                          const TextStyle(color: Colors.white),
-                                    ),
-                                    subtitle: Text(
-                                      controllerList[index]
-                                          .device!
-                                          .remoteId
-                                          .toString(),
-                                      style: TextStyle(color: Colors.grey[400]),
-                                    ),
+                                    title: controllerList[index].device != null
+                                        ? Text(
+                                            controllerList[index]
+                                                    .device!
+                                                    .advName
+                                                    .isNotEmpty
+                                                ? controllerList[index]
+                                                    .device!
+                                                    .advName
+                                                : 'Unknown Device',
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          )
+                                        : Text(
+                                            controllerList[index].name,
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                    subtitle:
+                                        controllerList[index].device != null
+                                            ? Text(
+                                                controllerList[index]
+                                                    .device!
+                                                    .remoteId
+                                                    .toString(),
+                                                style: TextStyle(
+                                                    color: Colors.grey[400]),
+                                              )
+                                            : null,
                                     onTap: () {
-                                      Provider.of<ControllerProvider>(context,
+                                      print(
+                                          'Selected controller: ${controllerList[index].name}');
+                                      Provider.of<HomeState>(context,
                                               listen: false)
                                           .setCurrentController(
                                               controllerList[index]);
-                                      connectToDevice(devicesList[index]);
+                                      if (controllerList[index].device != null)
+                                        connectToDevice(devicesList[index - 1]);
 
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) =>
-                                              ControllerConfigScreen(
-                                            device: controllerList[index],
+                                              ConfigureControllerScreen(
+                                            controller: Provider.of<HomeState>(
+                                                    context,
+                                                    listen: false)
+                                                .currentController,
                                           ),
                                         ),
                                       );
@@ -210,6 +234,9 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
   Future<void> connectToDevice(BluetoothDevice device) async {
     try {
       await device.connect();
+      if (device.isConnected) {
+        print("Connected to device: ${device.name}");
+      }
       await updateMTU(device);
       await afterConnectionSendData(device);
     } catch (e) {
@@ -259,7 +286,7 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
           Map<String, dynamic> jsonResponse = jsonDecode(receivedData);
           if (jsonResponse.containsKey("a") && jsonResponse["a"] == "mac") {
             String macAddress = jsonResponse["mac"];
-            Provider.of<ControllerProvider>(context, listen: false)
+            Provider.of<HomeState>(context, listen: false)
                 .setCurrentControllerID(macAddress);
             print("MAC Address: $macAddress");
           }
@@ -288,7 +315,7 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (context) => ControllerProvider(),
+      create: (context) => HomeState(),
       child: const MaterialApp(
         home: AddControllerScreen(),
       ),

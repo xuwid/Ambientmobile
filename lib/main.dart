@@ -73,7 +73,7 @@ class MyApp extends StatelessWidget {
         '/homeTab': (context) => const HomeScreen(),
         '/login': (context) => LoginPage(),
         '/signup': (context) => SignUpPage(), // Add signup page if needed
-        // Other routes
+        // Other routes...
       },
     );
   }

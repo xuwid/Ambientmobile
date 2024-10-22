@@ -45,5 +45,22 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Add Bluetooth Permission Keys -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app uses Bluetooth to communicate with nearby devices.</string>
+
+	<key>UIBackgroundModes</key>
+	<array>
+    	<string>bluetooth-central</string>
+	</array>
+
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Looking for local tcp Bonjour service</string>
+	<key>NSBonjourServices</key>
+	<array>
+  		<string>mqtt.tcp</string>
+	</array>
+	
 </dict>
 </plist>

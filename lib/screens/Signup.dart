@@ -28,45 +28,6 @@ class _SignUpPageState extends State<SignUpPage> {
       print('Error: No user logged in.');
       return;
     }
-
-    try {
-      final userDoc = firestore.collection('users').doc(currentUserId);
-
-      List<Area> defaultAreas = [
-        Area(
-          id: '', // Will be set after creation
-          title: "Roofline",
-          controller: [Controller("Main")],
-          zones: [
-            Zone(
-              title: "Zone 1",
-              ports: [
-                Port(portNumber: 1, isEnable: true),
-                Port(portNumber: 2, isEnable: false),
-                Port(portNumber: 3, isEnable: false),
-                Port(portNumber: 4, isEnable: false),
-              ],
-            ),
-          ],
-        ),
-        Area(
-          id: '', // Will be set after creation
-          title: "Landscape Lights",
-          controller: [Controller("Pool House")],
-          zones: [],
-        ),
-      ];
-
-      for (var area in defaultAreas) {
-        final newAreaRef = userDoc
-            .collection('areas')
-            .doc(); // Automatically generates a new ID
-        await newAreaRef.set(area.copyWith(id: newAreaRef.id).toMap());
-        print('Area added with ID: ${newAreaRef.id}');
-      }
-    } catch (e) {
-      print('Failed to add default areas: $e');
-    }
   }
 
   void _submitSignup() async {

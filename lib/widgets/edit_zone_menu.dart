@@ -1,7 +1,8 @@
 import 'dart:async'; // Import for Timer
+import 'package:ambient/screens/segmentScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'starting_light_widget.dart'; // Ensure this import is correct
+import 'package:ambient/widgets/starting_light_widget.dart'; // Ensure this import is correct
 
 class EditZoneMenu extends StatefulWidget {
   final bool isEditMenuVisible;

@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ambient/widgets/background_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:ambient/models/state_models.dart';
-import 'package:ambient/screens/zone_screen.dart';
+import 'package:ambient/screens/segmentScreen.dart';
 
 class NameYourAreaScreen extends StatefulWidget {
   const NameYourAreaScreen({super.key});
@@ -46,13 +46,20 @@ class _NameYourAreaScreenState extends State<NameYourAreaScreen> {
                   },
                 ),
               ),
-              title: Text(
-                'Name Your Area',
-                style: GoogleFonts.montserrat(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w600,
-                ),
+              title: Row(
+                children: [
+                  const Spacer(),
+                  Text(
+                    'Name Your Area',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Spacer()
+                ],
               ),
               centerTitle: true,
             ),
@@ -113,11 +120,12 @@ class _NameYourAreaScreenState extends State<NameYourAreaScreen> {
                     ),
                     onPressed: () {
                       if (_textController.text.isNotEmpty) {
-                        homeState.addTitleToArea(_textController.text);
+                        homeState.setCurrentNameYourArea(_textController.text);
+                        print(homeState.currentNameYourArea);
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const ZoneScreen()),
+                              builder: (context) => SegmentsScreen()),
                         );
                       }
                     },

@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:ambient/screens/effects.dart';
+import 'package:ambient/widgets/led_widget.dart';
 import 'package:ambient/widgets/menu_buttons.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -8,9 +10,13 @@ import 'package:ambient/models/state_models.dart';
 import 'package:ambient/widgets/starting_light_widget.dart';
 import 'package:ambient/widgets/color_picker.dart';
 import 'package:ambient/widgets/circle_color_picker.dart';
+import 'package:defer_pointer/defer_pointer.dart';
+import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 
 class CustomizeTab extends StatefulWidget {
-  const CustomizeTab({super.key});
+  String? selectedEvent;
+  bool admin;
+  CustomizeTab({super.key, this.selectedEvent, this.admin = false});
 
   @override
   _CustomizeTabState createState() => _CustomizeTabState();
@@ -20,30 +26,44 @@ class _CustomizeTabState extends State<CustomizeTab> {
   final TextEditingController _saveButtonController = TextEditingController();
   int _selectedLedIndex = 0; // Track selected LED
   List<LED> _leds = []; // List of LEDs
+  Scene? scene = Scene();
   bool isWhite = false;
-  Effect _selectedEffect = Effect(name: 'Static');
-  Zone? _selectedZone;
-  bool _showInputField = false;
+  String _selectedEffect = 'Static';
+  Area? _selectedArea;
   CircleColorPickerController colorPickerController =
       CircleColorPickerController();
+  double brightness = 0.5;
+  double saturation = 1.0;
+  Color selectedColor = const Color(0xFF3EFF20);
 
   @override
   void initState() {
     super.initState();
-    // Initialize with default number of LEDs
     _leds = List.generate(
-      12,
-      (index) => LED(
-        ledNumber: index,
-        color: Colors.green,
-        brightness: 1.0,
-        saturation: 1.0,
-      ),
+      3,
+      (index) => LED(index: index, color: const Color(0xFF3EFF20)),
     );
+    scene!.setPatternID(Provider.of<HomeState>(context, listen: false)
+        .convertEventToPatternId(_selectedEffect)); //
+    selectedColor = _leds[_selectedLedIndex].color;
+  }
+
+  void _addLED() {
+    setState(() {
+      _leds.add(LED(
+        index: _leds.length,
+        color: const Color(0xFF3EFF20),
+      ));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    HSLColor hslColor = HSLColor.fromColor(selectedColor);
+
+    selectedColor =
+        hslColor.withSaturation(saturation).withLightness(brightness).toColor();
+
     final selectedLED =
         _selectedLedIndex >= 0 && _selectedLedIndex < _leds.length
             ? _leds[_selectedLedIndex]
@@ -101,26 +121,18 @@ class _CustomizeTabState extends State<CustomizeTab> {
                         ),
                         child: Row(
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios,
-                                  color: Colors.grey),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Center(
-                                child: Text(
-                                  titleText,
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                            const Spacer(),
+                            const Spacer(),
+                            Text(
+                              "Customize",
+                              style: GoogleFonts.montserrat(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                            const Spacer(),
+                            const Spacer()
                           ],
                         ),
                       ),
@@ -133,52 +145,52 @@ class _CustomizeTabState extends State<CustomizeTab> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        height: 40,
-                        width: 140,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFC11687),
-                              Color(0xFFA427CA),
-                              Color(0xFF42E2FF),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(
-                              24), // Adjust for button shape
-                        ),
-                        padding: const EdgeInsets.all(
-                            1.0), // This creates the gradient border
-                        child: Container(
+                      if (!widget.admin)
+                        Container(
+                          height: 40,
+                          width: 140,
                           decoration: BoxDecoration(
-                            color: const Color(
-                                0xFF161616), // Solid black inner background
-                            borderRadius: BorderRadius.circular(
-                                24), // Same radius as the outer container
-                          ),
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: Colors
-                                  .transparent, // Keep transparent to show inner container
-                              side: const BorderSide(
-                                color: Colors
-                                    .transparent, // No direct border since the outer container handles it
-                                width: 2.0,
-                              ),
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFC11687),
+                                Color(0xFFA427CA),
+                                Color(0xFF42E2FF),
+                              ],
                             ),
-                            onPressed: () {
-                              _showBottomSheetMenu(context);
-                              // Your onPressed logic here
-                            },
-                            child: Text(
-                              _selectedZone?.title ?? 'Select Zone',
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white,
+                            borderRadius: BorderRadius.circular(
+                                24), // Adjust for button shape
+                          ),
+                          padding: const EdgeInsets.all(
+                              1.0), // This creates the gradient border
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                  0xFF161616), // Solid black inner background
+                              borderRadius: BorderRadius.circular(
+                                  24), // Same radius as the outer container
+                            ),
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors
+                                    .transparent, // Keep transparent to show inner container
+                                side: const BorderSide(
+                                  color: Colors
+                                      .transparent, // No direct border since the outer container handles it
+                                  width: 2.0,
+                                ),
+                              ),
+                              onPressed: () {
+                                _showBottomSheetMenu(context);
+                              },
+                              child: Text(
+                                _selectedArea?.title ?? 'Select Area',
+                                style: GoogleFonts.montserrat(
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
                       ElevatedButton(
                         onPressed: () {
                           _showSaveSceneDialog(context);
@@ -195,64 +207,83 @@ class _CustomizeTabState extends State<CustomizeTab> {
                       ),
                     ],
                   ),
+                  //Make a list of leds here,
                 ),
-                const SizedBox(height: 20),
-                // Conditionally show LED selection if a zone is selected
-                if (_selectedZone != null) ...[
-                  SingleChildScrollView(
+                if (_selectedArea != null || widget.admin)
+                  Row(
+                    children: [
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              ..._leds.map((led) {
+                                int index = _leds.indexOf(led);
+                                return Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: LEDWidget(
+                                    color: led.color,
+                                    isSelected: _selectedLedIndex ==
+                                        index, // Set the color of the LED
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedLedIndex = index;
+                                        selectedColor =
+                                            _leds[_selectedLedIndex].color;
+                                      });
+                                      //
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: GestureDetector(
+                                  onTap: _addLED,
+                                  child: const CircleAvatar(
+                                    radius: 25,
+                                    backgroundColor:
+                                        Colors.blue, // Color for the plus sign
+                                    child: const Text(
+                                      '+',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                if (_selectedArea != null || widget.admin)
+                  StartingLightWidget(
+                    cs: true,
+                    initialValue: _selectedLedIndex + 1,
+                    title: "",
+                    containerWidth: 180,
+                    containerHeight: 50,
+                    maxValue: _leds.length,
+                    onValueChanged: (value) => setState(() {
+                      _selectedLedIndex = value - 1;
+                      selectedColor = _leds[_selectedLedIndex].color;
+                    }),
+                  ),
+                const SizedBox(height: 5),
+                if (_selectedArea != null || widget.admin) ...[
+                  const SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children:
-                          List.generate(_selectedZone!.leds.length, (index) {
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedLedIndex = index;
-
-                              debugPrint('Selected LED: $_selectedLedIndex');
-                            });
-                            showColorPicker(context);
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: _leds.length > index
-                                  ? _leds[index].color
-                                  : Colors.green,
-                              shape: BoxShape.circle,
-                              border: _selectedLedIndex == index
-                                  ? Border.all(
-                                      color: Colors.white,
-                                      width: 2.0,
-                                    )
-                                  : null,
-                            ),
-                          ),
-                        );
-                      }),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  StartingLightWidget(
-                    title: '',
-                    initialValue: _selectedLedIndex,
-                    maxValue: _selectedZone!.leds.length - 1,
-                    onValueChanged: (newValue) {
-                      setState(() {
-                        // Ensure the new value does not exceed the number of LEDs
-                        _selectedLedIndex = newValue;
-                      });
-                    },
-                    onEndingLightValueChanged: (value) {
-                      setState(() {
-                        _selectedLedIndex = value;
-                      });
-                    },
-                  ),
-                  if (selectedLED != null) ...[
+                  if (selectedLED != null || widget.admin) ...[
                     Row(
                       children: [
                         GestureDetector(
@@ -260,17 +291,10 @@ class _CustomizeTabState extends State<CustomizeTab> {
                             setState(() {
                               isWhite = !isWhite;
                               if (isWhite) {
-                                _leds[_selectedLedIndex] = selectedLED.copyWith(
-                                  color: Colors.white,
-                                  brightness: 1.0,
-                                  saturation: 0.0,
-                                );
+                                _leds[_selectedLedIndex].color =
+                                    selectedColor.withOpacity(brightness);
                               } else {
-                                _leds[_selectedLedIndex] = selectedLED.copyWith(
-                                  color: Colors.green,
-                                  brightness: 1.0,
-                                  saturation: 1.0,
-                                );
+                                _leds[_selectedLedIndex].color = selectedColor;
                               }
                             });
                           },
@@ -322,69 +346,177 @@ class _CustomizeTabState extends State<CustomizeTab> {
                         ),
                       ],
                     ),
-                    Expanded(
-                      child: Center(
-                        child: SingleChildScrollView(
-                          child: ColorPicker(
-                            size: 230,
-                            initialColor: selectedLED.color,
-                            initialBrightness: selectedLED.brightness,
-                            initialSaturation: selectedLED.saturation,
-                            whiteLight: isWhite,
-                            onBrightnessChanged: (brightness) {
-                              setState(() {
-                                if (_leds.length > _selectedLedIndex) {
-                                  _leds[_selectedLedIndex] =
-                                      selectedLED.copyWith(
-                                    brightness: brightness,
-                                  );
-                                }
-                              });
-                            },
-                            onSaturationChanged: (saturation) {
-                              setState(() {
-                                if (_leds.length > _selectedLedIndex) {
-                                  _leds[_selectedLedIndex] =
-                                      selectedLED.copyWith(
-                                    saturation: saturation,
-                                  );
-                                }
-                              });
-                            },
-                            onColorChanged: (color) {
-                              setState(() {
-                                if (_leds.length > _selectedLedIndex) {
-                                  final newBrightness = color
-                                      .computeLuminance(); // Compute new brightness
-                                  final newSaturation =
-                                      HSVColor.fromColor(color)
-                                          .saturation; // Compute new saturation
-
-                                  _leds[_selectedLedIndex] =
-                                      selectedLED.copyWith(
-                                    color: color,
-                                    brightness: newBrightness,
-                                    saturation: newSaturation,
-                                  );
-
-                                  // Also call the brightness and saturation callbacks
-                                  if (selectedLED.brightness != newBrightness) {
-                                    _leds[_selectedLedIndex] =
-                                        selectedLED.copyWith(
-                                      brightness: newBrightness,
-                                    );
-                                  }
-                                  if (selectedLED.saturation != newSaturation) {
-                                    _leds[_selectedLedIndex] =
-                                        selectedLED.copyWith(
-                                      saturation: newSaturation,
-                                    );
-                                  }
-                                }
-                              });
-                            },
+                    DeferredPointerHandler(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          // Circular Brightness Slider
+                          Positioned(
+                            top: -32,
+                            left: 0,
+                            right: 0,
+                            child: DeferPointer(
+                              child: SleekCircularSlider(
+                                appearance: CircularSliderAppearance(
+                                  customColors: CustomSliderColors(
+                                    trackColor: Colors.grey,
+                                    progressBarColor: Colors.white,
+                                    shadowColor: Colors.white.withOpacity(0.5),
+                                    shadowMaxOpacity: 0.2,
+                                    shadowStep: 10.0,
+                                  ),
+                                  customWidths: CustomSliderWidths(
+                                    trackWidth: 2,
+                                    progressBarWidth: 2,
+                                    handlerSize: 12,
+                                  ),
+                                  size: 250, // Adjusted size
+                                  startAngle: 220,
+                                  angleRange: 100,
+                                ),
+                                min: 0,
+                                max: 1,
+                                initialValue: brightness,
+                                onChange: (double value) {
+                                  setState(() {
+                                    brightness = value;
+                                    isWhite
+                                        ? colorPickerController.selectedColor =
+                                            colorPickerController.selectedColor
+                                                .withOpacity(brightness)
+                                        : null;
+                                    _leds[_selectedLedIndex].color = isWhite
+                                        ? colorPickerController.selectedColor
+                                            .withOpacity(brightness)
+                                        : selectedColor;
+                                  });
+                                },
+                              ),
+                            ),
                           ),
-                        ),
+
+                          // Circular Saturation Slider
+                          Visibility(
+                            visible: !isWhite,
+                            child: Positioned(
+                              bottom: -34,
+                              left: 0,
+                              right: 0,
+                              child: DeferPointer(
+                                child: SleekCircularSlider(
+                                  appearance: CircularSliderAppearance(
+                                    customColors: CustomSliderColors(
+                                      trackColor: Colors.grey,
+                                      progressBarColor: Colors.white,
+                                      shadowColor:
+                                          Colors.white.withOpacity(0.5),
+                                      shadowMaxOpacity: 0.2,
+                                      shadowStep: 10.0,
+                                    ),
+                                    customWidths: CustomSliderWidths(
+                                      trackWidth: 2,
+                                      progressBarWidth: 2,
+                                      handlerSize: 12,
+                                    ),
+                                    size: 250, // Adjusted size
+                                    startAngle: 40,
+                                    angleRange: 100,
+                                  ),
+                                  min: 0,
+                                  max: 1,
+                                  initialValue: saturation,
+                                  onChange: (double value) {
+                                    setState(() {
+                                      saturation = value;
+                                      _leds[_selectedLedIndex].color =
+                                          selectedColor;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          Visibility(
+                            visible: !isWhite,
+                            child: const Positioned(
+                              bottom: -20,
+                              child: Text('Saturation',
+                                  style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                          const Positioned(
+                            top: -20,
+                            child: Text('Brightness',
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                          DeferPointer(
+                            child: CircleColorPicker(
+                              isWhiteLight: isWhite,
+                              controller: colorPickerController,
+                              colors: !isWhite
+                                  ? const [
+                                      Color.fromARGB(255, 255, 0, 0),
+                                      Color.fromARGB(255, 255, 255, 0),
+                                      Color.fromARGB(255, 0, 255, 0),
+                                      Color.fromARGB(255, 0, 255, 255),
+                                      Color.fromARGB(255, 0, 0, 255),
+                                      Color.fromARGB(255, 255, 0, 255),
+                                      Color.fromARGB(255, 255, 0, 0),
+                                    ]
+                                  : const [
+                                      Color(0xFFFFC58F),
+                                      Color(0xFFFFFFFF),
+                                      Color(0xFFC9E2FF),
+                                      Color(0xFFFFC58F),
+                                    ],
+                              onChanged: (color) {
+                                setState(() {
+                                  selectedColor = color;
+                                  colorPickerController.color = color;
+                                  _leds[_selectedLedIndex].color = isWhite
+                                      ? colorPickerController.selectedColor
+                                          .withOpacity(brightness)
+                                      : selectedColor;
+                                });
+                              },
+                              size: const Size(250, 250), // Reduced size
+                              strokeWidth: 10,
+                              thumbSize: 30,
+                            ),
+                          ),
+                          Positioned(
+                            top: (220 - 200 + 90) /
+                                2, // Centered based on color picker size
+                            left: (220 - 200 + 90) /
+                                2, // Centered based on color picker size
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isWhite
+                                        ? colorPickerController.selectedColor
+                                            .withOpacity(0.4)
+                                        : selectedColor.withOpacity(0.4),
+                                    spreadRadius: 7,
+                                    blurRadius: 16,
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 70,
+                                backgroundColor: Colors.black,
+                                child: CircleAvatar(
+                                  radius: 70,
+                                  backgroundColor: isWhite
+                                      ? colorPickerController.selectedColor
+                                      : selectedColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -397,55 +529,91 @@ class _CustomizeTabState extends State<CustomizeTab> {
     );
   }
 
-  Effect onEffectSelected(Effect effect) {
+  String onEffectSelected(String effect) {
     setState(() {
       _selectedEffect = effect;
     });
+    scene!.setPatternID(Provider.of<HomeState>(context, listen: false)
+        .convertEventToPatternId(effect));
+    print(scene!.patternID);
     return effect;
   }
 
   void showColorPicker(BuildContext context) {}
-  void _saveScene(BuildContext context) {
-    if (_selectedZone != null) {
-      final scene = Scene(
-        name: _saveButtonController.text.trim(),
-        ledSettings: _leds.map((led) => led.copyWith()).toList(),
-      );
-      //display ledSetting
-      scene.ledSettings.forEach((led) {
-        debugPrint('LED ${led.ledNumber}: ${led.color}' +
-            ' ${led.brightness}' +
-            ' ${led.saturation}');
-      });
-
-      scene.activatedEffects = _selectedEffect;
+  void _saveScene(BuildContext context) async {
+    if (_selectedArea != null || widget.admin) {
       final homeState = Provider.of<HomeState>(context, listen: false);
-      homeState.addSceneToZone(_selectedZone!.title, scene);
-
-      debugPrint('Scene saved: ${scene.name} in zone: ${_selectedZone!.title}');
-      debugPrint('Scene saved: ${scene.activatedEffects.name}');
-    } else {
-      debugPrint('No zone selected to save scene.');
-    }
-  }
-
-  void _activateScene(Scene scene) {
-    setState(() {
-      for (int i = 0; i < _leds.length; i++) {
-        _leds[i] = _leds[i].copyWith(
-          color: scene.ledSettings[i].color,
-          brightness: scene.ledSettings[i].brightness,
-          saturation: scene.ledSettings[i].saturation,
+      if (_saveButtonController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a name for the scene'),
+          ),
         );
+        return;
+      } else {
+        // Set the scene name and colors
+        scene!.setName(_saveButtonController.text);
+        scene!.setColors(_leds.map((led) => led.color.value).toList());
+
+        // Save scene to the user's current area (if not admin)
+        if (!widget.admin) {
+          homeState.addSceneToCurrentArea(scene!);
+        }
+
+        // If admin, save the scene in the `sharedEvents` folder using arrayUnion
+        if (widget.admin) {
+          try {
+            final firestore = FirebaseFirestore.instance;
+
+            // Reference to the selected event document
+            final eventDocRef =
+                firestore.collection('sharedEvents').doc(widget.selectedEvent);
+
+            // Check if the event (folder) exists
+            final eventSnapshot = await eventDocRef.get();
+
+            // Create the document if it doesn't exist
+            if (!eventSnapshot.exists) {
+              await eventDocRef.set({
+                'name': widget.selectedEvent,
+                'createdAt': FieldValue
+                    .serverTimestamp(), // Optional timestamp for creation
+                'scenes': [], // Initialize the scenes array
+              });
+            }
+
+            // Add the scene to the `scenes` array using FieldValue.arrayUnion
+            await eventDocRef.update({
+              'scenes': FieldValue.arrayUnion(
+                  [scene!.toMap()]), // Convert scene to a map for storage
+            });
+
+            print(
+                'Scene added to Firestore in shared event: ${widget.selectedEvent}');
+
+            // Notify the user of successful save
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Scene saved successfully in shared events'),
+              ),
+            );
+          } catch (e) {
+            // Handle Firestore errors
+            print('Error saving scene to shared events: $e');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to save scene to shared events'),
+              ),
+            );
+          }
+        }
       }
-    });
+    }
   }
 
   void _showBottomSheetMenu(BuildContext context) {
     final homeState = Provider.of<HomeState>(context, listen: false);
-    final activeAreas = homeState.areas.where((area) => area.isActive).toList();
-    final List<Zone> zones =
-        activeAreas.isNotEmpty ? activeAreas.first.zones : [];
+    final Areas = homeState.areas;
 
     showModalBottomSheet(
       context: context,
@@ -476,27 +644,21 @@ class _CustomizeTabState extends State<CustomizeTab> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ...zones.map((zone) {
+                    ...Areas.map((Areesf) {
                       return ListTile(
                         title: Center(
                           child: Text(
-                            zone.title,
+                            Areesf.title,
                             style: GoogleFonts.montserrat(color: Colors.white),
                           ),
                         ),
                         onTap: () {
                           setState(() {
-                            _selectedZone = zone;
-                            _leds = List.generate(
-                              _selectedZone!.leds.length,
-                              (index) => LED(
-                                ledNumber: index,
-                                color: Colors.green,
-                                brightness: 1.0,
-                                saturation: 1.0,
-                              ),
-                            );
+                            _selectedArea = Areesf;
                           });
+
+                          homeState.setCurrentArea(Areesf);
+                          print(homeState.currentArea!.id);
                           Navigator.pop(context);
                         },
                       );
@@ -533,7 +695,6 @@ class _CustomizeTabState extends State<CustomizeTab> {
                   ),
                 ),
               ),
-              // Centered Dialog content
               Center(
                 child: Material(
                   color: Colors

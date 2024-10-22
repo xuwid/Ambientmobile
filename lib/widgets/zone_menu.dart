@@ -1,4 +1,5 @@
 import 'dart:async'; // Import for Timer
+import 'package:ambient/screens/segmentScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'starting_light_widget.dart';

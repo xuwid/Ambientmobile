@@ -164,12 +164,12 @@ class _CircleColorPickerState extends State<CircleColorPicker>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        widget.colorCodeBuilder != null
-                            ? widget.colorCodeBuilder!(context, _color)
-                            : Text(
-                                '#${_color.value.toRadixString(16).substring(2)}',
-                                style: widget.textStyle,
-                              ),
+                        // widget.colorCodeBuilder != null
+                        //     ? widget.colorCodeBuilder!(context, _color)
+                        //     : Text(
+                        //         '#${_color.value.toRadixString(16).substring(2)}',
+                        //         style: widget.textStyle,
+                        //       ),
                         const SizedBox(height: 16),
                         Container(
                           width: 64,
@@ -188,16 +188,16 @@ class _CircleColorPickerState extends State<CircleColorPicker>
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _LightnessSlider(
-                          width: 140,
-                          thumbSize: 26,
-                          hue: _hueController.value,
-                          lightness: _lightnessController.value,
-                          onEnded: _onEnded,
-                          onChanged: (lightness) {
-                            _lightnessController.value = lightness;
-                          },
-                        ),
+                        // _LightnessSlider(
+                        //   width: 140,
+                        //   thumbSize: 26,
+                        //   hue: _hueController.value,
+                        //   lightness: _lightnessController.value,
+                        //   onEnded: _onEnded,
+                        //   onChanged: (lightness) {
+                        //     _lightnessController.value = lightness;
+                        //   },
+                        // ),
                       ],
                     ),
                   );

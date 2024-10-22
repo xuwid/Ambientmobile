@@ -53,16 +53,17 @@ class AmbientLightsAccount extends StatelessWidget {
                               Icons.account_circle_outlined,
                               color: Colors.white,
                             ),
-                            const SizedBox(
-                                width: 10), // Space between the icon and text
+                            const Spacer(),
                             Text(
                               'AmbientLights Account', // Fixed title text
                               style: GoogleFonts.montserrat(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                            const Spacer(),
+                            const Spacer()
                           ],
                         ),
                       ),

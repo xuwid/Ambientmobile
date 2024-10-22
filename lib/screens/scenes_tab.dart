@@ -34,21 +34,26 @@ class _RooflineState extends State<Roofline> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset:
+          false, // Keeps the bottom navigation bar unaffected
       body: BackgroundWidget(
         konsa: true,
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Consumer<HomeState>(
+          child: Column(
+            children: [
+              // Add padding around the AppBar content
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0), // Add padding to the AppBar
+                child: Consumer<HomeState>(
                   builder: (context, homeState, child) {
                     final activeAreas =
                         homeState.areas.where((area) => area.isActive).toList();
 
                     String titleText;
                     if (activeAreas.isEmpty) {
-                      titleText = 'No Area is Selected';
+                      titleText = 'Scenes';
                     } else {
                       final titles = activeAreas
                           .take(2)
@@ -60,56 +65,45 @@ class _RooflineState extends State<Roofline> {
                       titleText = titles.join(', ');
                     }
 
-                    return AppBar(
-                      automaticallyImplyLeading: false,
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      flexibleSpace: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 25.0),
-                        margin: const EdgeInsets.all(16),
-                        decoration: const BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(16),
-                            bottomRight: Radius.circular(16),
-                          ),
-                          border: Border(
-                            bottom: BorderSide(
-                              color: Colors.grey,
-                              width: 0.5,
-                            ),
-                          ),
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
                         ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios,
-                                  color: Colors.grey),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                            Expanded(
-                              child: Center(
-                                child: Text(
-                                  titleText,
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Colors.grey,
+                            width: 0.5,
+                          ),
                         ),
                       ),
-                      centerTitle: true,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            titleText,
+                            style: GoogleFonts.montserrat(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
-                const SizedBox(height: 10),
-                Expanded(
+              ),
+              const SizedBox(height: 10),
+              // Expanded content with padding
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0), // Horizontal padding for list content
                   child: ListView.builder(
                     itemCount: events.length,
                     itemBuilder: (context, index) {
@@ -175,11 +169,12 @@ class _RooflineState extends State<Roofline> {
                     },
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
+      // Bottom Navigation Bar
     );
   }
 }

@@ -44,7 +44,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                   _buildSettingsOption(
                     context,
-                    title: 'Zones Setup',
+                    title: 'Area Setup',
                     icon: Icons.layers_outlined,
                     onTap: () => Navigator.push(
                       context,

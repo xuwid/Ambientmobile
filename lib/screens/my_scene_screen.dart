@@ -11,11 +11,12 @@ class MyScenesScreen extends StatelessWidget {
     Future.microtask(() {
       final homeState = Provider.of<HomeState>(context, listen: false);
       // Optionally set active areas before fetching scenes
-      homeState.fetchScenes();
+      homeState.fetchScenesForActivatedAreas();
     });
 
     return Scaffold(
       body: BackgroundWidget(
+        konsa: true,
         child: SafeArea(
           child: Column(
             children: [
@@ -48,18 +49,17 @@ class MyScenesScreen extends StatelessWidget {
                           Navigator.of(context).pop();
                         },
                       ),
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            'My Scenes',
-                            style: GoogleFonts.montserrat(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                      const Spacer(),
+                      Text(
+                        'My Scenes',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const Spacer(),
+                      const Spacer()
                     ],
                   ),
                 ),
@@ -95,11 +95,12 @@ class MyScenesScreen extends StatelessWidget {
                             } else {
                               // Activate the selected scene
                               homeState.setActiveScene(scene);
+                              print('Selected scene: ${scene.colors}');
                               // Display LED settings of a scene when it is selected
-                              scene.ledSettings.forEach((led) {
-                                debugPrint('LED ${led.ledNumber}: ${led.color} '
-                                    '${led.brightness} ${led.saturation}');
-                              });
+                              //       scene.ledSettings.forEach((led) {
+                              //       debugPrint('LED ${led.ledNumber}: ${led.color} '
+                              //          '${led.brightness} ${led.saturation}');
+                              //    });
                             }
                           },
                           child: Padding(

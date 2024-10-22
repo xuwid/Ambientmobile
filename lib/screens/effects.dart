@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:ambient/models/state_models.dart';
 
 class Effects extends StatefulWidget {
-  final Function(Effect) onEffectSelected; // Callback function
+  final Function(String) onEffectSelected; // Callback function
 
   Effects({required this.onEffectSelected}); // Constructor with callback
 
@@ -24,6 +24,7 @@ class _EffectsState extends State<Effects> {
 
     return Scaffold(
       body: BackgroundWidget(
+        konsa: true,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -77,18 +78,17 @@ class _EffectsState extends State<Effects> {
                                 Navigator.of(context).pop();
                               },
                             ),
-                            Expanded(
-                              child: Center(
-                                child: Text(
-                                  'Effects',
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                            const Spacer(),
+                            Text(
+                              'Effects',
+                              style: GoogleFonts.montserrat(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                            const Spacer(),
+                            const Spacer(),
                           ],
                         ),
                       ),
@@ -104,7 +104,7 @@ class _EffectsState extends State<Effects> {
                       return GestureDetector(
                         onTap: () {
                           _handleEffectSelection(events[index]);
-                           Navigator.of(context).pop();
+                          Navigator.of(context).pop();
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 20),
@@ -165,6 +165,6 @@ class _EffectsState extends State<Effects> {
     );
 
     // Invoke the callback and navigate to the CustomizedScreen
-    widget.onEffectSelected(Effect(name: effectName));
+    widget.onEffectSelected(effectName);
   }
 }

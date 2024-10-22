@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
-import 'package:ambient/models/model.dart'; // Update to match your actual model import
+import 'package:ambient/models/state_models.dart'; // Update to match your actual model import
 
 class ControllerConfigScreen extends StatefulWidget {
   final Controller device;
@@ -173,7 +173,7 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
         }
       });
 
-      await Future.delayed(Duration(seconds: 10)); // Wait for status
+      await Future.delayed(const Duration(seconds: 10)); // Wait for status
     } catch (e) {
       print("Error listening for Wi-Fi status: $e");
       setState(() {

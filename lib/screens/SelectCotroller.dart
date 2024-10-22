@@ -14,8 +14,7 @@ class SelectControllerScreen extends StatefulWidget {
 
 class _SelectControllerScreenState extends State<SelectControllerScreen> {
   late List<Controller> _localControllers;
-  final int _maxSelectedControllers = 5;
-  List<Controller> _selectedControllers = [];
+  Controller? _selectedController;
 
   @override
   void initState() {
@@ -24,7 +23,13 @@ class _SelectControllerScreenState extends State<SelectControllerScreen> {
 
     // Initialize local controllers with the state from HomeState
     _localControllers = homeState.controllers.map((controller) {
-      return Controller(controller.name, isActive: false);
+      return Controller(
+          name: controller.name,
+          isActive: false,
+          id: controller.id,
+          type: controller.type,
+          device: controller.device,
+          portlength: controller.portlength);
     }).toList();
   }
 
@@ -53,7 +58,6 @@ class _SelectControllerScreenState extends State<SelectControllerScreen> {
                     size: 18,
                   ),
                   onPressed: () {
-                    homeState.removeCurrentArea();
                     Navigator.pop(context);
                   },
                 ),
@@ -62,7 +66,7 @@ class _SelectControllerScreenState extends State<SelectControllerScreen> {
                 'Select Controller',
                 style: GoogleFonts.montserrat(
                   color: Colors.white,
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -79,31 +83,18 @@ class _SelectControllerScreenState extends State<SelectControllerScreen> {
                       onChanged: (value) {
                         setState(() {
                           if (value) {
-                            if (_selectedControllers.length >=
-                                _maxSelectedControllers) {
-                              // Deactivate the oldest selected controller
-                              final oldestController =
-                                  _selectedControllers.removeAt(0);
-                              oldestController.isActive = false;
-                              // Optionally update the HomeState
-                              //   final homeState = Provider.of<HomeState>(context,
-                              //     listen: false);
-                              homeState
-                                  .removeControllerFromArea(oldestController);
+                            // If there's already a selected controller, deactivate it
+                            if (_selectedController != null) {
+                              _selectedController!.isActive = false;
                             }
-                            // Activate the new controller
-                            controller.isActive = true;
-                            _selectedControllers.add(controller);
-                          } else {
-                            // Deactivate the controller
-                            controller.isActive = false;
-                            _selectedControllers.remove(controller);
-                          }
 
-                          if (controller.isActive) {
-                            homeState.addControllerToArea(controller);
+                            // Activate the newly selected controller
+                            controller.isActive = true;
+                            _selectedController = controller;
                           } else {
-                            homeState.removeControllerFromArea(controller);
+                            // If the same controller is deactivated
+                            controller.isActive = false;
+                            _selectedController = null;
                           }
                         });
                       },
@@ -159,6 +150,8 @@ class _SelectControllerScreenState extends State<SelectControllerScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   onPressed: () {
+                    homeState.setCurrentController(_selectedController!);
+                    print(homeState.currentController.name);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
