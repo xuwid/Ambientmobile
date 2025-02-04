@@ -5,7 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'dart:async';
 import 'package:ambient/wirelessProtocol/mqtt.dart';
+import 'dart:convert';
+
+import 'package:mqtt_client/mqtt_client.dart';
 
 class Segments {
   final int startindex;
@@ -298,7 +302,7 @@ class Port {
 class Controller {
   int? type;
   String? id;
-  final String name;
+  String name;
   BluetoothDevice? device; // Assuming device needs special handling
   List<int>? portlength;
   bool isActive = true;
@@ -491,15 +495,9 @@ class HomeState with ChangeNotifier {
     }
   }
 
-  List<Controller> _controllers = [
-    Controller(
-        name: "Dummy Data",
-        portlength: [25, 72, 37, 44],
-        type: 12,
-        isActive: true),
-    Controller(name: "Main"),
-    Controller(name: "Pool House"),
-  ];
+  List<Controller> _controllers = [];
+
+  final Map<String, Timer> _pingTimers = {};
 
   List<Controller> get controllers => _controllers;
   // Zone? _currentZone;
@@ -512,7 +510,6 @@ class HomeState with ChangeNotifier {
   Controller? _currentController;
 
   String? currentNameYourArea;
-
   String get currentAreaName => currentNameYourArea ?? 'Area';
 
   List<Segments>? currentSegments;
@@ -523,6 +520,78 @@ class HomeState with ChangeNotifier {
   // Getter for active areas
 
   Area? get currentArea => _currentArea;
+
+  void _resetPingTimer(String deviceId) {
+    _pingTimers[deviceId]?.cancel();
+
+    // Set a new timer to check connection status after 20 seconds
+    _pingTimers[deviceId] = Timer(const Duration(seconds: 10), () {
+      final device = _controllers.firstWhere((d) => d.id == deviceId);
+      if (device != null && device.isActive) {
+        print("Device is no longer active");
+        device.isActive = false;
+        notifyListeners();
+
+        print(
+            'Device $deviceId is no longer connecting. WiFi might be disconnected.');
+        notifyListeners(); // Notify listeners of the change
+        ;
+      }
+    });
+  }
+
+  void _subscribeToTopics() async {
+    await mqttService.connect();
+    for (var device in _controllers) {
+      if (device.id != null) {
+        // Subscribe to /mac_address/ping
+        print('Subscribing to topics for device: ${device.id}');
+        mqttService.subscribeToTopic('/${device.id}/ping');
+        mqttService.subscribeToTopic('/${device.id}/data');
+
+        // Subscribe to /mac_address/alert
+      }
+    }
+
+    // Listen for incoming messages
+    mqttService.onMessage = (topic, payload) {
+      final message = String.fromCharCodes(payload);
+      print('Received message: $message from topic: $topic');
+      _handleIncomingMessage(topic, message);
+    };
+  }
+
+  void _handleIncomingMessage(String topic, String message) {
+    final deviceId = topic.split('/')[1];
+
+    // Find the device matching the received deviceId
+    final device = _controllers.firstWhere(
+      (d) => d.id == deviceId,
+      //  orElse: () => null, // Avoids an error if no device matches
+    );
+    print("Resetting the timer");
+    device.isActive = true;
+    notifyListeners();
+    _resetPingTimer(deviceId);
+
+    if (device == null) return; // Exit if no device matches the deviceId
+
+    // Reset the ping timer or handle the controller reset for the device
+    _resetPingTimer(deviceId); // Or perform any other reset action here
+
+    final parsedMessage = _parseMessage(message);
+
+    // Additionally, handle specific actions if needed
+    if (parsedMessage['action'] == 'ping') {
+      print('Ping received for device: $deviceId');
+      _resetPingTimer(
+          deviceId); // Optionally reset again if "ping" specifically requires it
+    }
+  }
+
+  Map<String, dynamic> _parseMessage(String message) {
+    return Map<String, dynamic>.from(jsonDecode(message));
+  }
 
   void setCurrentArea(Area area) {
     _currentArea = area;
@@ -590,8 +659,7 @@ class HomeState with ChangeNotifier {
   }
 
   void setCurrentControllerID(String id) {
-    _currentController =
-        _controllers.firstWhere((controller) => controller.id == id);
+    _currentController!.id = id;
     notifyListeners(); // Notify listeners about the change
   }
 
@@ -751,8 +819,123 @@ class HomeState with ChangeNotifier {
     // Update the _areas list and notify listeners
     _areas = fetchedAreas;
     notifyListeners(); // Notify listeners to rebuild the UI
+
+    _subscribeToTopics();
   }
 
+  Future<void> addControllertoUser(Controller con) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      print('No user is logged in');
+      return;
+    }
+
+    final userDoc = _firestore.collection('users').doc(currentUserId);
+    final controllersCollection = userDoc.collection('controllers');
+
+    // Add the controller to the Firestore collection
+    await controllersCollection.add(con.toMap());
+
+    // Update the local state with the new controller
+    _controllers.add(con);
+    notifyListeners(); // Notify listeners to rebuild the UI
+  }
+
+  void getControllersForUser() {
+    List<Controller> fetchedControllers = [];
+
+    for (var area in _areas) {
+      if (area.controller != null) {
+        fetchedControllers.add(area.controller!);
+      }
+    }
+
+    print('Fetched controllers: ${fetchedControllers}.');
+
+    // Use WidgetsBinding to delay the notification to listeners
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Remove duplicates based on controller id or other attributes if id is null
+      final uniqueControllers = <Controller>[];
+
+      bool isDuplicate(Controller controller) {
+        return uniqueControllers.any((uniqueController) {
+          if (controller.id != null && uniqueController.id != null) {
+            return controller.id == uniqueController.id;
+          }
+          // Check all other attributes if id is null
+          return controller.id == null &&
+              uniqueController.id == null &&
+              controller.name == uniqueController.name &&
+              controller.type == uniqueController.type &&
+              controller.isActive == uniqueController.isActive &&
+              controller.portlength == uniqueController.portlength &&
+              controller.device == uniqueController.device;
+          // Add other relevant attributes
+        });
+      }
+
+      for (var controller in fetchedControllers) {
+        if (!isDuplicate(controller)) {
+          uniqueControllers.add(controller);
+        }
+      }
+
+      // Update the local state with the unique controllers
+      _controllers = uniqueControllers;
+      notifyListeners(); // Notify listeners to rebuild the UI
+
+      print('Controllers updated in local state: $_controllers');
+    });
+  }
+
+  void renameController(String newName) async {
+    if (_currentController == null) {
+      print('No controller is selected.');
+      return;
+    }
+
+    // Get Firestore instance and current user ID
+    final firestore = FirebaseFirestore.instance;
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (currentUserId == null) {
+      print('No user is currently logged in.');
+      return;
+    }
+
+    // Reference to the user's areas collection
+    final areasCollection =
+        firestore.collection('users').doc(currentUserId).collection('areas');
+
+    // Fetch all areas
+    final areasSnapshot = await areasCollection.get();
+
+    // Loop through all areas and update the controller name where it matches the current controller
+    for (var areaDoc in areasSnapshot.docs) {
+      final area = Area.fromMap(areaDoc.data());
+
+      // Check if the current controller matches the one in the area
+      if (area.controller?.id == _currentController!.id) {
+        // Update the controller name locally
+        _currentController!.name = newName;
+
+        // Update Firestore for the area document with the new controller name
+        await areasCollection.doc(area.id).update({
+          'controller': _currentController!.toMap(),
+        });
+      }
+    }
+
+    // Notify listeners about the updated controller name in the app's local state
+    notifyListeners();
+
+    print('Controller name updated across relevant areas in Firestore.');
+  }
+
+  HomeState() {
+    getControllersForUser();
+    _subscribeToTopics();
+  }
   List<Area> _areas = [];
 
   String? _selectedTimezone;
@@ -964,6 +1147,34 @@ class HomeState with ChangeNotifier {
   ]; // Add saved scenes
   String? activeScene; // Store the active scene
 
+  Future<void> sendRenameDataMQTT(String newName) async {
+    if (_currentController == null) {
+      print('Error: Current controller or its ID is null.');
+      return;
+    }
+
+    // Create the JSON message to send
+    Map<String, dynamic> jsonMessage = {
+      "a": "rn",
+      "n": newName,
+    };
+
+    try {
+      // Ensure MQTT is connected before publishing
+      await mqttService.connect();
+      String hin = _currentController!.id ?? 'malaiks';
+
+      // Construct the topic using the current controller's ID
+      String topic = "/${hin}/data";
+
+      // Publish the message to the MQTT topic
+      mqttService.publishJsonToTopic(topic, jsonMessage);
+      print('MQTT message sent: $jsonMessage to topic: $topic');
+    } catch (e) {
+      print('Error sending MQTT message: $e');
+    }
+  }
+
   // Method to set the active scene
   Future<void> setActiveScene(Scene? scene) async {
     if (scene == null) {
@@ -988,10 +1199,12 @@ class HomeState with ChangeNotifier {
       if (area != null && area.controller != null) {
         final controller = area.controller!;
         final controllerId = controller.id ?? 'malaiks';
-
+        print('Controller ID: $controllerId');
+        final typefda = controller.type;
         // Prepare the JSON payload
         Map<String, dynamic> jsonMessage = {
           "a": "activate",
+          "type": typefda,
           "portlength":
               controller.portlength ?? [], // Controller's port lengths
           "seg":
@@ -1008,12 +1221,13 @@ class HomeState with ChangeNotifier {
         };
 
         // Publish the JSON message to the controller's topic (controller ID)
-        mqttService.publishJsonToTopic(controllerId, jsonMessage);
+        String top = "/" + controllerId + "/data";
+        mqttService.publishJsonToTopic(top, jsonMessage);
 
         // Update the active scene in the local state
 
         print(
-            'Scene "${scene.name}" activated and message sent to topic "$controllerId".');
+            'Scene "${scene.name}" activated and message sent to topic "$top".');
       } else {
         print(
             'Error: No active area found with the given scene, or area has no controller.');
@@ -1053,6 +1267,7 @@ class HomeState with ChangeNotifier {
           // Prepare the JSON payload
           Map<String, dynamic> jsonMessage = {
             "a": "activate",
+            "type": controller.type,
             "portlength":
                 controller.portlength ?? [], // Controller's port lengths
             "seg": area.segments
@@ -1068,12 +1283,13 @@ class HomeState with ChangeNotifier {
               "density": scene.density ?? 0,
             },
           };
+          String top = "/" + controllerId + "/data";
 
           // Publish the JSON message to the controller's topic (controller ID)
-          mqttService.publishJsonToTopic(controllerId, jsonMessage);
+          mqttService.publishJsonToTopic(top, jsonMessage);
 
           print(
-              'Scene "${scene.name}" activated for area "${area.title}" and message sent to topic "$controllerId".');
+              'Scene "${scene.name}" activated for area "${area.title}" and message sent to topic "$top".');
         } else {
           print('Error: Area "${area.title}" has no controller.');
         }
@@ -1465,16 +1681,41 @@ class HomeState with ChangeNotifier {
   //   }
   // }
 
-  void toggleController(String name) {
-    final controller = _controllers.firstWhere((c) => c.name == name);
-    controller.isActive = !controller.isActive;
-    notifyListeners();
+  void showControllerStatus(BuildContext context, String name) {
+    final controller = _controllers.firstWhere(
+      (c) => c.name == name,
+    );
+
+    if (controller != null) {
+      // Check the isConnecting (or isActive) status and display a message
+      final message = controller.isActive
+          ? 'Controller "$name" is connected.'
+          : 'Controller "$name" is not connected.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Controller "$name" not found.')),
+      );
+    }
   }
 
-  void toggleControllerByIndex(int index, bool isActive) {
+  void showControllerStatusByIndex(BuildContext context, int index) {
     if (index >= 0 && index < _controllers.length) {
-      _controllers[index].isActive = isActive;
-      notifyListeners();
+      final controller = _controllers[index];
+      final message = controller.isActive
+          ? 'Controller at index $index is active.'
+          : 'Controller at index $index is not active.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Controller at index $index not found.')),
+      );
     }
   }
 

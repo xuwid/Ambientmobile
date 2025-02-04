@@ -1,59 +1,85 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ambient/widgets/background_widget.dart';
-import 'package:wifi_iot/wifi_iot.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:ambient/models/state_models.dart';
+import 'package:provider/provider.dart';
+import 'package:ambient/wirelessProtocol/mqtt.dart';
 
 class ControllerSetup extends StatefulWidget {
   @override
   _ControllerSetupState createState() => _ControllerSetupState();
 }
 
-class _ControllerSetupState extends State<ControllerSetup>
-    with TickerProviderStateMixin {
-  String selectedOption = 'Type of IC Setting';
-  bool isOpen = false;
-
-  final List<String> networkOptions = [
-    'Common',
-    'SM16703P',
-    'WS2812E',
-    'UC1903B',
-    'UCS2904',
-    'Common RGBW'
-  ];
-
-  List<WifiNetwork> _networks = [];
-  bool _isScanning = false;
-  String _selectedNetwork = '';
+class _ControllerSetupState extends State<ControllerSetup> {
+  String? selectedController;
+  Controller? _selectedController;
+  final ExpansionTileController etc = ExpansionTileController();
+  final TextEditingController _nameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _requestPermissions();
   }
 
-  Future<void> _requestPermissions() async {
-    final status = await Permission.location.request();
-    if (status.isDenied) {
-      // Handle permission denied
-    }
-  }
+  Widget _buildControllerSelectionExpansionTile() {
+    final homeState = Provider.of<HomeState>(context);
+    final controllers = homeState.controllers;
 
-  Future<void> _scanNetworks() async {
-    setState(() {
-      _isScanning = true;
-    });
-    List<WifiNetwork> networks = await WiFiForIoTPlugin.loadWifiList();
-    setState(() {
-      _networks = networks;
-      _isScanning = false;
-    });
-  }
+    return Padding(
+      padding: const EdgeInsets.all(22.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          border: const Border(
+            bottom: BorderSide(
+              color: Color(0xFF545458),
+              width: 1.2,
+            ),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              dividerColor: Colors.transparent,
+              splashColor: Colors.transparent,
+            ),
+            child: ExpansionTile(
+              controller: etc,
+              iconColor: Colors.white,
+              collapsedIconColor: Colors.white,
+              title: Text(
+                selectedController ?? 'Select a Controller',
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.black.withOpacity(0.2),
+              collapsedBackgroundColor: Colors.black.withOpacity(0.3),
+              children: controllers.map((contr) {
+                return ListTile(
+                  title: Text(
+                    contr.name,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedController = contr;
+                      selectedController = contr.name;
+                      _nameController.text =
+                          contr.name; // Initialize with current name
+                    });
 
-  Future<void> _connectToNetwork(String ssid, String password) async {
-    await WiFiForIoTPlugin.connect(ssid,
-        password: password, security: NetworkSecurity.WPA);
+                    Provider.of<HomeState>(context, listen: false)
+                        .setCurrentController(contr);
+                    etc.collapse();
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -85,7 +111,7 @@ class _ControllerSetupState extends State<ControllerSetup>
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
                     child: Row(
                       children: [
                         IconButton(
@@ -95,172 +121,95 @@ class _ControllerSetupState extends State<ControllerSetup>
                             Navigator.of(context).pop();
                           },
                         ),
+                        const Spacer(),
                         const Image(
                             image: AssetImage('assets/controller_setup.png'),
                             width: 28),
                         const SizedBox(width: 3),
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              'Controller Setup',
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        Text(
+                          'Controller Setup',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const Spacer(),
+                        const Spacer()
                       ],
                     ),
                   ),
                 ),
                 centerTitle: true,
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 20),
-                    decoration: BoxDecoration(
-                      color: Color(0x40000000),
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.grey,
-                          width: 0.8,
+              _buildControllerSelectionExpansionTile(),
+              if (_selectedController != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0, vertical: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Rename Controller',
+                          labelStyle: TextStyle(color: Colors.grey),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white),
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                        ),
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            setState(() {
+                              selectedController = _nameController.text;
+                            });
+
+                            // Update the controller name in the database
+                            final homeState =
+                                Provider.of<HomeState>(context, listen: false);
+                            homeState.renameController(_nameController.text);
+
+                            await homeState
+                                .sendRenameDataMQTT(_nameController.text);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Controller name updated successfully!',
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            );
+
+                            // Update the controller name in the MQTT server
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Update Name',
+                            style: GoogleFonts.montserrat(color: Colors.white),
+                          ),
                         ),
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          // Dropdown for IC settings
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                selectedOption,
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    isOpen = !isOpen;
-                                  });
-                                },
-                                child: Icon(
-                                  isOpen
-                                      ? Icons.keyboard_arrow_up
-                                      : Icons.keyboard_arrow_down,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                          AnimatedSize(
-                            duration: Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            child: Visibility(
-                              visible: isOpen,
-                              child: Column(
-                                children: List.generate(networkOptions.length,
-                                    (index) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 4.0),
-                                    child: InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          selectedOption =
-                                              networkOptions[index];
-                                          isOpen = false;
-                                        });
-                                      },
-                                      child: Text(
-                                        networkOptions[index],
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 20),
-                          // Network settings section
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _selectedNetwork.isEmpty
-                                    ? 'Select WiFi Network'
-                                    : _selectedNetwork,
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.refresh, color: Colors.white),
-                                onPressed: _scanNetworks,
-                              ),
-                            ],
-                          ),
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: _networks.length,
-                              itemBuilder: (context, index) {
-                                final network = _networks[index];
-                                return ListTile(
-                                  title: Text(
-                                    network.ssid!,
-                                    style: GoogleFonts.montserrat(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedNetwork = network.ssid!;
-                                    });
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                          SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: _selectedNetwork.isEmpty
-                                ? null
-                                : () async {
-                                    // Connect to the selected network
-                                    await _connectToNetwork(
-                                        _selectedNetwork, 'YourPassword');
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: Colors.blue,
-                              minimumSize: Size(double.infinity, 51),
-                            ),
-                            child: Text(
-                              'Connect',
-                              style: TextStyle(fontSize: 15),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
-              ),
             ],
           ),
         ),

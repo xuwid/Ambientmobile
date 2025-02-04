@@ -1,15 +1,16 @@
+import 'package:ambient/screens/controller_port.dart';
 import 'package:ambient/widgets/background_widget.dart';
-import 'package:ambient/widgets/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:ambient/models/state_models.dart'; // Update to match your actual model import
+import 'package:provider/provider.dart';
 
 class ControllerConfigScreen extends StatefulWidget {
-  final Controller device;
+  Controller? device;
 
-  ControllerConfigScreen({required this.device});
+  ControllerConfigScreen({this.device});
 
   @override
   _ControllerConfigScreenState createState() => _ControllerConfigScreenState();
@@ -20,13 +21,12 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
   TextEditingController ssidController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   bool isLoading = false; // Track the loading state
-  bool isConnecting = false; // Track the scanning state
 
   @override
   void initState() {
     super.initState();
-    sendScanRequest();
     listenForScanResponse();
+    sendScanRequest();
     // Send scan request when screen is on
   }
 
@@ -37,8 +37,6 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
     });
 
     try {
-      //wait for 1 second
-      await Future.delayed(const Duration(seconds: 1));
       await sendData({"a": "scan"}); // Send scan request to BLE device
 
       // Wait for the scan result to arrive
@@ -67,12 +65,11 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
       if (characteristic == null) return null;
 
       await characteristic.setNotifyValue(true);
-      final subscription = characteristic.onValueReceived.listen((value) {
+      final subscription = characteristic.value.listen((value) {
         String receivedData = utf8.decode(value);
         Map<String, dynamic> jsonResponse = jsonDecode(receivedData);
 
-        final subscription =
-            characteristic.onValueReceived.listen((value) async {
+        final subscription = characteristic.value.listen((value) async {
           String receivedData = utf8.decode(value);
           Map<String, dynamic> jsonResponse = jsonDecode(receivedData);
 
@@ -87,7 +84,7 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
           }
         });
 
-        // Optionally, you can handle cancellation or cleanup
+// Optionally, you can handle cancellation or cleanup
 
         return null;
       });
@@ -118,7 +115,7 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
   // Function to find the target Bluetooth characteristic
   Future<BluetoothCharacteristic?> findCharacteristic() async {
     List<BluetoothService> services =
-        await widget.device.device!.discoverServices();
+        await widget.device!.device!.discoverServices();
     for (BluetoothService service in services) {
       for (BluetoothCharacteristic characteristic in service.characteristics) {
         if (characteristic.uuid.toString() ==
@@ -132,9 +129,6 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
 
   // Function to send Wi-Fi credentials to BLE device
   Future<void> sendWifiCredentials(String ssid, String password) async {
-    setState(() {
-      isConnecting = true; // Show loading indicator during connection process
-    });
     Map<String, String> data = {
       "a": "wc",
       "n": ssid,
@@ -152,33 +146,39 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
       if (characteristic == null) return;
 
       await characteristic.setNotifyValue(true);
-      final subscription = characteristic.onValueReceived.listen((value) {
+      final subscription = characteristic.value.listen((value) {
         String receivedData = utf8.decode(value);
         Map<String, dynamic> jsonResponse = jsonDecode(receivedData);
         print("Received data: $jsonResponse");
-
+        print("Received data dkadss: $receivedData");
         if (jsonResponse["a"] == "ws") {
-          setState(() {
-            isConnecting =
-                false; // Hide the loading indicator after receiving status
-          });
-
+          print("Wi-Fi status received");
           if (jsonResponse["s"] == 1) {
             // Success
+            //Show a dialigue showing the success
             _showDialog("Wi-Fi connected successfully");
+            print("Wi-Fi connected successfully");
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ConfigureControllerScreen(
+                  controller: Provider.of<HomeState>(context, listen: false)
+                      .currentController,
+                ),
+              ),
+            );
           } else {
             // Failure
+            // Show a dialogue showing the error
             _showDialog("Wi-Fi connection failed: ${jsonResponse['e']}");
+            print("Error: ${jsonResponse['e']}");
           }
         }
       });
 
-      await Future.delayed(const Duration(seconds: 10)); // Wait for status
+      await Future.delayed(Duration(seconds: 10)); // Wait for status
     } catch (e) {
       print("Error listening for Wi-Fi status: $e");
-      setState(() {
-        isConnecting = false; // Hide loading if there's an error
-      });
     }
   }
 
@@ -214,6 +214,12 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
+                controller: ssidController,
+                decoration: InputDecoration(labelText: 'SSID'),
+                enabled: false,
+                //: ssid,
+              ),
+              TextField(
                 controller: passwordController,
                 decoration: InputDecoration(labelText: 'Password'),
                 obscureText: true,
@@ -231,7 +237,6 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
               onPressed: () {
                 String password = passwordController.text;
                 sendWifiCredentials(ssid, password);
-
                 Navigator.pop(context);
               },
               child: Text('Connect'),
@@ -248,9 +253,10 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
       body: BackgroundWidget(
         child: Column(
           children: [
-            const SizedBox(height: 30),
             AppBar(
+              automaticallyImplyLeading: false,
               backgroundColor: Colors.transparent,
+              elevation: 0,
               leading: Container(
                 margin: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
@@ -268,36 +274,42 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
                   },
                 ),
               ),
-              title: Center(
-                child: Text(
-                  'Select Wifi',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w600,
+              title: Row(
+                children: [
+                  const Spacer(),
+                  Text(
+                    'Wifi Setup',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.refresh,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      sendScanRequest();
+                    },
+                  ),
+                ],
               ),
-              actions: [
-                IconButton(
-                  icon: Icon(Icons.refresh, color: Colors.white),
-                  onPressed: () {
-                    sendScanRequest();
-                  },
-                ),
-              ],
+              centerTitle: true,
             ),
+            const SizedBox(height: 20),
             isLoading
-                ? Expanded(child: Center(child: CircularLoadingIndicator()))
+                ? Center(child: CircularProgressIndicator())
                 : wifiNetworks.isEmpty
                     ? Center(child: Text('No Wi-Fi networks found'))
-                    : ListView.builder(
-                        itemCount: wifiNetworks.length,
-                        itemBuilder: (context, index) {
-                          return Container(
-                            padding: const EdgeInsets.all(16.0),
-                            color: const Color.fromARGB(255, 66, 64, 64),
-                            child: ListTile(
+                    : Expanded(
+                        // Wrap ListView.builder in Expanded
+                        child: ListView.builder(
+                          itemCount: wifiNetworks.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
                               title: Text(
                                 wifiNetworks[index],
                                 style: TextStyle(color: Colors.white),
@@ -306,19 +318,25 @@ class _ControllerConfigScreenState extends State<ControllerConfigScreen> {
                                 showWifiDialog(wifiNetworks[
                                     index]); // Show Wi-Fi dialog on tap
                               },
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-            if (isConnecting)
-              Expanded(
-                child: Center(
-                  child: CircularLoadingIndicator(),
-                ),
-              ),
           ],
         ),
       ),
     );
   }
+}
+
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => HomeState(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: ControllerConfigScreen(),
+      ),
+    ),
+  );
 }

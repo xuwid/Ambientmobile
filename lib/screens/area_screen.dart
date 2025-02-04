@@ -18,11 +18,6 @@ class _AreaScreenState extends State<AreaScreen> {
   Area? _selectedArea;
   final ExpansionTileController etc = ExpansionTileController();
 
-  @override
-  void initState() {
-    super.initState();
-  }
-
   Widget _buildAreaSelectionExpansionTile() {
     final homeState = Provider.of<HomeState>(context);
     final areas = homeState.areas;
@@ -44,8 +39,8 @@ class _AreaScreenState extends State<AreaScreen> {
           borderRadius: BorderRadius.circular(24),
           child: Theme(
             data: Theme.of(context).copyWith(
-              dividerColor: Colors.transparent, // Removes internal divider
-              splashColor: Colors.transparent, // Removes tap splash effect
+              dividerColor: Colors.transparent,
+              splashColor: Colors.transparent,
             ),
             child: ExpansionTile(
               controller: etc,
@@ -60,12 +55,12 @@ class _AreaScreenState extends State<AreaScreen> {
               children: areas.map((area) {
                 return ListTile(
                   title: Text(
-                    area.title, // Assuming each area has a name property
+                    area.title,
                     style: const TextStyle(color: Colors.white),
                   ),
                   onTap: () {
                     setState(() {
-                      selectedArea = area.title; // Update the selected area
+                      selectedArea = area.title;
                       _selectedArea = area;
                     });
                     etc.collapse();
@@ -152,9 +147,14 @@ class _AreaScreenState extends State<AreaScreen> {
                 centerTitle: true,
               ),
               _buildAreaSelectionExpansionTile(),
-              // Call the area selection widget
               if (_selectedArea != null)
-                Expanded(child: EditArea(area: _selectedArea!)),
+                Expanded(
+                  child: EditArea(
+                    key:
+                        ValueKey(_selectedArea!.id), // Unique key for each area
+                    area: _selectedArea!,
+                  ),
+                ),
             ],
           ),
         ),

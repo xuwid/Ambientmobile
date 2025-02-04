@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:ambient/screens/controller_configure.dart';
 import 'package:ambient/screens/controller_port.dart';
 import 'package:flutter/material.dart';
@@ -57,8 +59,10 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
     });
 
     // Start scanning for nearby BLE devices
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 10))
-        .then((_) async {
+    FlutterBluePlus.startScan(
+      timeout: const Duration(seconds: 10),
+      withServices: [Guid(SERVICE_UUID)],
+    ).then((_) async {
       await Future.delayed(const Duration(seconds: 4));
       setState(() {
         isScanning = false;
@@ -81,11 +85,6 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
         }
       }
     });
-    controllerList.add(Controller(
-      name: "Dummy Controller",
-    ));
-
-    //Remove this when deployment
   }
 
   @override
@@ -202,15 +201,18 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
                                               listen: false)
                                           .setCurrentController(
                                               controllerList[index]);
+                                      print(
+                                          'Selected controller: ${controllerList[index].name}');
                                       if (controllerList[index].device != null)
-                                        connectToDevice(devicesList[index - 1]);
+                                        connectToDevice(
+                                            controllerList[index].device!);
 
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) =>
-                                              ConfigureControllerScreen(
-                                            controller: Provider.of<HomeState>(
+                                              ControllerConfigScreen(
+                                            device: Provider.of<HomeState>(
                                                     context,
                                                     listen: false)
                                                 .currentController,
@@ -288,6 +290,7 @@ class _AddControllerScreenState extends State<AddControllerScreen> {
             String macAddress = jsonResponse["mac"];
             Provider.of<HomeState>(context, listen: false)
                 .setCurrentControllerID(macAddress);
+
             print("MAC Address: $macAddress");
           }
         } catch (e) {

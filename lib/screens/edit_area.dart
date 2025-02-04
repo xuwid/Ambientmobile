@@ -16,7 +16,7 @@ class EditArea extends StatefulWidget {
 
 class _EditAreaState extends State<EditArea> {
   late List<Segments> segments; // Initialize segments list from selected area
-  final int maxLightValue = 200; // Maximum light value for the segments
+  late int maxLightValue; // Maximum light value for the segments
   List<bool> localPorts = [false, false, false, false];
 
   @override
@@ -24,6 +24,13 @@ class _EditAreaState extends State<EditArea> {
     super.initState();
     segments = widget.area.segments!; // Get segments from the selected area
     localPorts = widget.area.ports!; // Get ports from the selected area
+
+    maxLightValue =
+        widget.area.controller!.portlength?.reduce((a, b) => a + b) ?? 0;
+
+    // Initialize the segments list with a single segment
+
+    print('Max Light Value: $maxLightValue');
   }
 
   void _addSegment() {

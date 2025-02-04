@@ -23,6 +23,7 @@ class CustomizeTab extends StatefulWidget {
 }
 
 class _CustomizeTabState extends State<CustomizeTab> {
+  late HomeState homeState;
   final TextEditingController _saveButtonController = TextEditingController();
   int _selectedLedIndex = 0; // Track selected LED
   List<LED> _leds = []; // List of LEDs
@@ -46,6 +47,14 @@ class _CustomizeTabState extends State<CustomizeTab> {
     scene!.setPatternID(Provider.of<HomeState>(context, listen: false)
         .convertEventToPatternId(_selectedEffect)); //
     selectedColor = _leds[_selectedLedIndex].color;
+
+    homeState = Provider.of<HomeState>(context, listen: false);
+  }
+
+  @override
+  void dispose() {
+    _saveButtonController.dispose();
+    super.dispose();
   }
 
   void _addLED() {
@@ -540,73 +549,88 @@ class _CustomizeTabState extends State<CustomizeTab> {
   }
 
   void showColorPicker(BuildContext context) {}
+//    Error saving scene to shared events: Looking up a deactivated widget's ancestor is unsafe.
+// I/flutter (25195): At this point the state of the widget's element tree is no longer stable.
+// I/flutter (25195): To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
+// E/flutter (25195): [ERROR:flutter/runtime/dart_vm_initializer.cc(41)] Unhandled Exception: Looking up a deactivated widget's ancestor is unsafe.
+// E/flutter (25195): At this point the state of the widget's element tree is no longer stable.
+// I am gettinng this errors
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Access the HomeState here
+    homeState = Provider.of<HomeState>(context, listen: false);
+  }
+
   void _saveScene(BuildContext context) async {
+    // First check if the scene name is empty
+    if (_saveButtonController.text.isEmpty) {
+      _showSnackBar(context, 'Please enter a name for the scene');
+      return;
+    }
+
+    // Check if _selectedArea is not null or if the user is an admin
     if (_selectedArea != null || widget.admin) {
-      final homeState = Provider.of<HomeState>(context, listen: false);
-      if (_saveButtonController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter a name for the scene'),
-          ),
-        );
-        return;
-      } else {
-        // Set the scene name and colors
-        scene!.setName(_saveButtonController.text);
-        scene!.setColors(_leds.map((led) => led.color.value).toList());
+      // Set scene name and colors
+      scene!.setName(_saveButtonController.text);
+      scene!.setColors(_leds.map((led) => led.color.value).toList());
 
-        // Save scene to the user's current area (if not admin)
-        if (!widget.admin) {
-          homeState.addSceneToCurrentArea(scene!);
-        }
+      // Save the scene to the user's current area (if not admin)
+      if (!widget.admin) {
+        homeState.addSceneToCurrentArea(scene!);
+        _showSnackBar(context, 'Scene saved successfully');
+      }
 
-        // If admin, save the scene in the `sharedEvents` folder using arrayUnion
-        if (widget.admin) {
-          try {
-            final firestore = FirebaseFirestore.instance;
+      // Save scene for admin in Firestore if applicable
+      if (widget.admin) {
+        await _saveSceneToSharedEvents(context);
+      }
+    }
+  }
 
-            // Reference to the selected event document
-            final eventDocRef =
-                firestore.collection('sharedEvents').doc(widget.selectedEvent);
+  // Function to show SnackBar safely
+  void _showSnackBar(BuildContext context, String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
 
-            // Check if the event (folder) exists
-            final eventSnapshot = await eventDocRef.get();
+  // Function to handle saving scene for admin to Firestore
+  Future<void> _saveSceneToSharedEvents(BuildContext context) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final eventDocRef =
+          firestore.collection('sharedEvents').doc(widget.selectedEvent);
 
-            // Create the document if it doesn't exist
-            if (!eventSnapshot.exists) {
-              await eventDocRef.set({
-                'name': widget.selectedEvent,
-                'createdAt': FieldValue
-                    .serverTimestamp(), // Optional timestamp for creation
-                'scenes': [], // Initialize the scenes array
-              });
-            }
+      // Check if event folder exists
+      final eventSnapshot = await eventDocRef.get();
+      if (!eventSnapshot.exists) {
+        await eventDocRef.set({
+          'name': widget.selectedEvent,
+          'createdAt': FieldValue.serverTimestamp(),
+          'scenes': [],
+        });
+      }
 
-            // Add the scene to the `scenes` array using FieldValue.arrayUnion
-            await eventDocRef.update({
-              'scenes': FieldValue.arrayUnion(
-                  [scene!.toMap()]), // Convert scene to a map for storage
-            });
+      // // Add scene to shared events
+      await eventDocRef.update({
+        'scenes': FieldValue.arrayUnion([scene!.toMap()]),
+      });
 
-            print(
-                'Scene added to Firestore in shared event: ${widget.selectedEvent}');
-
-            // Notify the user of successful save
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Scene saved successfully in shared events'),
-              ),
-            );
-          } catch (e) {
-            // Handle Firestore errors
-            print('Error saving scene to shared events: $e');
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Failed to save scene to shared events'),
-              ),
-            );
-          }
-        }
+      // Check if widget is still mounted before updating UI
+      if (mounted) {
+        _showSnackBar(context, 'Scene saved successfully in shared events');
+      }
+      if (mounted) {
+        Navigator.pop(context); // Close dialog
+      }
+    } catch (e) {
+      // Log error and show SnackBar if mounted
+      print('Error saving scene to shared events: $e');
+      if (mounted) {
+        _showSnackBar(context, 'Failed to save scene to shared events');
       }
     }
   }
@@ -754,6 +778,7 @@ class _CustomizeTabState extends State<CustomizeTab> {
                         ElevatedButton(
                           onPressed: () {
                             _saveScene(context);
+                            _saveButtonController.clear();
                             Navigator.of(context).pop(); // Close the dialog
                           },
                           style: ElevatedButton.styleFrom(

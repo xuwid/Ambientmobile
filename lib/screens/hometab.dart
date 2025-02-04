@@ -32,7 +32,9 @@ class _HomeTabState extends State<HomeTab> {
       // Fetch areas for the current user when the widget is initialized
       final homeState = Provider.of<HomeState>(context, listen: false);
       homeState.getAreasForUser(currentUser!.uid);
+      homeState.getControllersForUser();
       _checkAdminStatus(homeState);
+
       // _checkAdminStatus(homeState);
     } else {
       // Handle the case where there is no current user
@@ -224,8 +226,9 @@ class _HomeTabState extends State<HomeTab> {
           title: controller.name,
           isActive: controller.isActive, // Display the active state
           onToggle: (value) {
-            homeState.toggleControllerByIndex(index, value);
+            homeState.showControllerStatusByIndex(context, index);
           },
+
           index: index, // Pass index to determine background image
         );
       }).toList(),

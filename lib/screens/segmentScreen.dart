@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ambient/widgets/starting_light_widget.dart';
 import 'package:ambient/models/state_models.dart';
 import 'package:provider/provider.dart';
+import 'package:ambient/models/state_models.dart';
 
 class SegmentsScreen extends StatefulWidget {
   @override
@@ -12,8 +13,23 @@ class SegmentsScreen extends StatefulWidget {
 
 class _SegmentScreenState extends State<SegmentsScreen> {
   List<Segments> segments = [];
-  final int maxLightValue = 200; // Maximum light value for the segments
+
+  late int maxLightValue;
   List<bool> localPorts = [false, false, false, false];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final homeState = Provider.of<HomeState>(context, listen: false);
+      // Calculate the sum of port lengths
+      maxLightValue =
+          homeState.currentController?.portlength?.reduce((a, b) => a + b) ?? 0;
+
+      // Initialize the segments list with a single segment
+
+      print('Max Light Value: $maxLightValue');
+    });
+  }
 
   void _addSegment() {
     setState(() {
@@ -65,10 +81,23 @@ class _SegmentScreenState extends State<SegmentsScreen> {
     // Access the HomeState to create the area
     final homeState = Provider.of<HomeState>(context, listen: false);
 
+    // Create the area with the current segments, controller, and ports
     homeState.createArea(homeState.currentAreaName,
         segments: segments,
         controller: homeState.currentController,
         ports: localPorts);
+
+    // Check if the current controller already exists in homeState.controllers by ID
+    final controllerExists = homeState.controllers
+        .any((controller) => controller.id == homeState.currentController?.id);
+
+    // Add the current controller if it doesn't already exist
+    if (!controllerExists && homeState.currentController != null) {
+      homeState.controllers.add(homeState.currentController!);
+      print('Controller added to homeState.controllers.');
+    } else {
+      print('Controller already exists in homeState.controllers.');
+    }
 
     // Navigate back to homeTab
     Navigator.popUntil(context, (route) => route.isFirst);
