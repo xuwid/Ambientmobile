@@ -603,7 +603,7 @@ class _CustomizeTabState extends State<CustomizeTab> {
       scene!.setColors(_leds.map((led) => led.color.value).toList());
 
       // Save the scene to the user's current area (if not admin)
-      if (widget.user) {
+      if (widget.user || !widget.admin) {
         await homeState.addOrUpdateSceneToCurrentArea(scene!,
             originalScene: widget.sceneToEdit);
         _showSnackBar(context, 'Scene saved successfully');

@@ -15,20 +15,26 @@ class MyScenesScreen extends StatefulWidget {
 }
 
 class _MyScenesScreenState extends State<MyScenesScreen> {
-  // Delete a scene from all activated areas of the user
+  // Helper method to refresh scenes and update the UI.
+  Future<void> _fetchScenesAndUpdateUI() async {
+    final homeState = Provider.of<HomeState>(context, listen: false);
+    await homeState.fetchScenesForActivatedAreas();
+    setState(() {}); // Rebuild UI with updated scenes.
+  }
+
+  // Edit a scene and refresh scenes after returning.
   Future<void> _editScene(BuildContext context, Scene scene) async {
     final homeState = Provider.of<HomeState>(context, listen: false);
-    final result = await Navigator.push(
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
             CustomizeTab(sceneToEdit: scene, admin: true, user: true),
       ),
-    );
-
-    if (result == true) {
-      await homeState.fetchScenesForActivatedAreas();
-    }
+    ).then((_) async {
+      // Refresh scenes after returning from the edit screen.
+      await _fetchScenesAndUpdateUI();
+    });
   }
 
   Future<void> _deleteScene(BuildContext context, String sceneName) async {
@@ -229,7 +235,6 @@ class _MyScenesScreenState extends State<MyScenesScreen> {
                                 ),
                               );
 
-                              ///  homeState.setCurrentArea();
                               if (confirmDelete == true) {
                                 await _deleteScene(context, scene.name);
                               }
