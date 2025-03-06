@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:ambient/screens/effects.dart';
+import 'package:ambient/utils/assets.dart';
 import 'package:ambient/widgets/led_widget.dart';
 import 'package:ambient/widgets/menu_buttons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,13 +17,21 @@ import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 class CustomizeTab extends StatefulWidget {
   String? selectedEvent;
   bool admin;
-  CustomizeTab({super.key, this.selectedEvent, this.admin = false});
+  bool user;
+  final Scene? sceneToEdit;
+  CustomizeTab(
+      {super.key,
+      this.user = false,
+      this.sceneToEdit,
+      this.selectedEvent,
+      this.admin = false});
 
   @override
   _CustomizeTabState createState() => _CustomizeTabState();
 }
 
 class _CustomizeTabState extends State<CustomizeTab> {
+  String? originalSceneName;
   late HomeState homeState;
   final TextEditingController _saveButtonController = TextEditingController();
   int _selectedLedIndex = 0; // Track selected LED
@@ -40,15 +49,33 @@ class _CustomizeTabState extends State<CustomizeTab> {
   @override
   void initState() {
     super.initState();
-    _leds = List.generate(
-      3,
-      (index) => LED(index: index, color: const Color(0xFF3EFF20)),
-    );
-    scene!.setPatternID(Provider.of<HomeState>(context, listen: false)
-        .convertEventToPatternId(_selectedEffect)); //
-    selectedColor = _leds[_selectedLedIndex].color;
-
     homeState = Provider.of<HomeState>(context, listen: false);
+
+    // Initialize from sceneToEdit if provided
+    if (widget.sceneToEdit != null) {
+      scene = widget.sceneToEdit!.copy();
+      originalSceneName = scene!.name;
+      _leds = scene!.colors
+          .asMap()
+          .entries
+          .map((entry) => LED(index: entry.key, color: Color(entry.value)))
+          .toList();
+      _selectedEffect = homeState.convertPatternIdToEvent(scene!.patternID);
+      if (_leds.isNotEmpty) {
+        _selectedLedIndex = 0;
+        selectedColor = _leds[0].color;
+        HSLColor hslColor = HSLColor.fromColor(selectedColor);
+        brightness = hslColor.lightness;
+        saturation = hslColor.saturation;
+        print(widget.sceneToEdit!.name);
+        _saveButtonController.text = widget.sceneToEdit!.name;
+      }
+    } else {
+      _leds = List.generate(
+          3, (index) => LED(index: index, color: const Color(0xFF3EFF20)));
+      scene = Scene();
+      scene!.setPatternID(homeState.convertEventToPatternId(_selectedEffect));
+    }
   }
 
   @override
@@ -576,13 +603,14 @@ class _CustomizeTabState extends State<CustomizeTab> {
       scene!.setColors(_leds.map((led) => led.color.value).toList());
 
       // Save the scene to the user's current area (if not admin)
-      if (!widget.admin) {
-        homeState.addSceneToCurrentArea(scene!);
+      if (widget.user) {
+        await homeState.addOrUpdateSceneToCurrentArea(scene!,
+            originalScene: widget.sceneToEdit);
         _showSnackBar(context, 'Scene saved successfully');
       }
 
       // Save scene for admin in Firestore if applicable
-      if (widget.admin) {
+      if (widget.admin && !widget.user) {
         await _saveSceneToSharedEvents(context);
       }
     }
@@ -591,47 +619,77 @@ class _CustomizeTabState extends State<CustomizeTab> {
   // Function to show SnackBar safely
   void _showSnackBar(BuildContext context, String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      });
     }
   }
 
-  // Function to handle saving scene for admin to Firestore
+  Future<bool> _sceneExists(String sceneName) async {
+    final firestore = FirebaseFirestore.instance;
+    final eventDocRef =
+        firestore.collection('sharedEvents').doc(widget.selectedEvent);
+    final snapshot = await eventDocRef.get();
+    if (snapshot.exists && snapshot.data()?['scenes'] != null) {
+      List<dynamic> scenes = snapshot.data()?['scenes'];
+      return scenes.any((element) => element['name'] == sceneName);
+    }
+    return false;
+  }
+
   Future<void> _saveSceneToSharedEvents(BuildContext context) async {
     try {
+      // Check for duplicate scene name before saving:
+      // When creating a new scene, originalSceneName is null.
+      // When editing, we allow the same name only if it remains unchanged.
+      if (originalSceneName == null) {
+        // Creating a new scene:
+        bool exists = await _sceneExists(scene!.name);
+        if (exists) {
+          _showSnackBar(
+              context, 'Scene with this name already exists in this event');
+
+          return;
+        }
+      } else {
+        // Updating an existing scene:
+        if (scene!.name != originalSceneName) {
+          bool exists = await _sceneExists(scene!.name);
+          if (exists) {
+            _showSnackBar(
+                context, 'Scene with this name already exists in this event');
+
+            return;
+          }
+        }
+      }
+
       final firestore = FirebaseFirestore.instance;
       final eventDocRef =
           firestore.collection('sharedEvents').doc(widget.selectedEvent);
 
-      // Check if event folder exists
-      final eventSnapshot = await eventDocRef.get();
-      if (!eventSnapshot.exists) {
-        await eventDocRef.set({
-          'name': widget.selectedEvent,
-          'createdAt': FieldValue.serverTimestamp(),
-          'scenes': [],
+      // Remove old scene if editing
+      if (originalSceneName != null) {
+        await eventDocRef.update({
+          'scenes': FieldValue.arrayRemove([widget.sceneToEdit!.toMap()]),
         });
       }
 
-      // // Add scene to shared events
+      // Add or update the new scene
       await eventDocRef.update({
         'scenes': FieldValue.arrayUnion([scene!.toMap()]),
       });
 
-      // Check if widget is still mounted before updating UI
       if (mounted) {
         _showSnackBar(context, 'Scene saved successfully in shared events');
-      }
-      if (mounted) {
-        Navigator.pop(context); // Close dialog
+
+        Navigator.pop(context);
       }
     } catch (e) {
-      // Log error and show SnackBar if mounted
-      print('Error saving scene to shared events: $e');
-      if (mounted) {
-        _showSnackBar(context, 'Failed to save scene to shared events');
-      }
+      print('Error saving scene: $e');
+      if (mounted) _showSnackBar(context, 'Failed to save scene');
     }
   }
 

@@ -1,0 +1,2 @@
+/Users/ahmed/Documents/GitHub/Ambientmobile/android/app/.cxx/RelWithDebInfo/2cr3r721/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/ahmed/Documents/GitHub/Ambientmobile/android/app/.cxx/RelWithDebInfo/2cr3r721/armeabi-v7a/CMakeFiles/rebuild_cache.dir

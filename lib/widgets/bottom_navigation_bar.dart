@@ -1,4 +1,4 @@
-// lib/widgets/bottom_navigation_bar.dart
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -14,14 +14,35 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Total number of items
+    const int itemCount = 4;
+    // Get screen dimensions
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Calculate dynamic bar height: using a factor of the screen height,
+    // but ensuring it doesn't go below 105.
+    final barHeight = screenHeight * 0.12;
+
+    // Compute image width as a fraction of screen width
+    final imageWidth = screenWidth * 0.06; // e.g. ~24px on a 400px wide screen
+
+    // Calculate each navigation item's width.
+    final itemWidth = screenWidth / itemCount;
+    // Set indicator width as a fraction of the item width.
+    final indicatorWidth = itemWidth * 0.5;
+    // Center the indicator above the current tab.
+    final indicatorLeft =
+        selectedIndex * itemWidth + (itemWidth - indicatorWidth) / 2;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // Increase height using a Container around BottomNavigationBar
+        // BottomNavigationBar container
         Container(
           padding: const EdgeInsets.all(0),
           color: Colors.transparent,
-          height: 90, // Increase height here
+          height: barHeight,
           child: BottomNavigationBar(
             currentIndex: selectedIndex,
             onTap: onItemTapped,
@@ -32,7 +53,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
               BottomNavigationBarItem(
                 icon: Image.asset(
                   "assets/home_un.png",
-                  width: 25,
+                  width: imageWidth,
                   color: selectedIndex == 0
                       ? Colors.white
                       : const Color(0xFFBBBBBB),
@@ -42,7 +63,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
               BottomNavigationBarItem(
                 icon: Image.asset(
                   "assets/scenes_un.png",
-                  width: 25,
+                  width: imageWidth,
                   color: selectedIndex == 1
                       ? Colors.white
                       : const Color(0xFFBBBBBB),
@@ -52,7 +73,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
               BottomNavigationBarItem(
                 icon: Image.asset(
                   "assets/customize_un.png",
-                  width: 25,
+                  width: imageWidth,
                   color: selectedIndex == 2
                       ? Colors.white
                       : const Color(0xFFBBBBBB),
@@ -62,7 +83,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
               BottomNavigationBarItem(
                 icon: Image.asset(
                   "assets/settings_un.png",
-                  width: 25,
+                  width: imageWidth,
                   color: selectedIndex == 3
                       ? Colors.white
                       : const Color(0xFFBBBBBB),
@@ -70,27 +91,20 @@ class CustomBottomNavigationBar extends StatelessWidget {
                 label: 'Settings',
               ),
             ],
-            selectedLabelStyle: GoogleFonts.montserrat(
-              color: Colors.white,
-            ),
-            unselectedLabelStyle: GoogleFonts.montserrat(
-              color: Colors.white,
-            ),
+            selectedLabelStyle: GoogleFonts.montserrat(color: Colors.white),
+            unselectedLabelStyle: GoogleFonts.montserrat(color: Colors.white),
             showSelectedLabels: true,
             showUnselectedLabels: true,
             type: BottomNavigationBarType.fixed,
           ),
         ),
-        // Custom purple circular rectangle indicator positioned just above the bottom navigation bar
+        // Custom indicator positioned above the BottomNavigationBar
         Positioned(
-          bottom: 90, // Set to match the height of the BottomNavigationBar
-          left: selectedIndex * (MediaQuery.of(context).size.width / 4) +
-              27, // Adjust position
+          bottom: barHeight, // Align it with the top of the navigation bar
+          left: indicatorLeft,
           child: Container(
-            width: MediaQuery.of(context).size.width / 7 -
-                16, // Adjust width to fit tab
-            height:
-                6, // Adjust height for the top part of the circular rectangle
+            width: indicatorWidth,
+            height: 6, // You may adjust this relative value if desired
             decoration: const BoxDecoration(
               color: Colors.purple,
               borderRadius: BorderRadius.only(

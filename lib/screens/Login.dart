@@ -6,6 +6,7 @@ import 'package:ambient/widgets/background_widget.dart';
 import 'package:ambient/screens/homescreen.dart';
 import 'package:ambient/screens/Signup.dart';
 import 'admin_screen.dart'; // Import your AdminScreen
+import 'forgot_password_screen.dart'; // <-- Import the ForgotPasswordScreen
 
 class LoginPage extends StatefulWidget {
   @override
@@ -21,9 +22,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _submitLogin() async {
     final isValid = _formKey.currentState!.validate();
-    if (!isValid) {
-      return;
-    }
+    if (!isValid) return;
     _formKey.currentState!.save();
     setState(() {
       isAuthenticating = true;
@@ -31,7 +30,9 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       UserCredential userCredential = await auth.signInWithEmailAndPassword(
-          email: enteredEmail, password: enteredPassword);
+        email: enteredEmail,
+        password: enteredPassword,
+      );
 
       // Fetch user data from Firestore
       final userDoc = await FirebaseFirestore.instance
@@ -41,32 +42,20 @@ class _LoginPageState extends State<LoginPage> {
 
       final isAdmin = userDoc.data()?['isAdmin'] ?? false;
 
-      if (isAdmin) {
-        // If user is an admin, navigate to AdminScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AdminScreen(),
-          ),
-        );
-      } else {
-        // If user is not an admin, navigate to HomeScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
-          ),
-        );
-      }
+      // If user is not an admin, navigate to HomeScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       var message = 'An error occurred, please check your credentials!';
       if (e.message != null) {
         message = e.message!;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-        ),
+        SnackBar(content: Text(message)),
       );
     } finally {
       setState(() {
@@ -88,13 +77,13 @@ class _LoginPageState extends State<LoginPage> {
         child: Container(
           width: double.infinity,
           height: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(height: 150),
+                const SizedBox(height: 150),
                 Text(
                   'Login',
                   style: GoogleFonts.montserrat(
@@ -102,15 +91,16 @@ class _LoginPageState extends State<LoginPage> {
                     fontSize: 25,
                   ),
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Form(
                   key: _formKey,
                   child: Column(
                     children: [
+                      // Email TextField
                       Container(
                         width: 360,
                         height: 51,
-                        margin: EdgeInsets.only(bottom: 10),
+                        margin: const EdgeInsets.only(bottom: 10),
                         child: TextFormField(
                           decoration: InputDecoration(
                             hintText: 'Email',
@@ -118,12 +108,14 @@ class _LoginPageState extends State<LoginPage> {
                               color: Colors.white,
                               fontSize: 16,
                             ),
-                            fillColor: Color(0xff606060),
+                            fillColor: const Color(0xff606060),
                             filled: true,
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(9),
-                              borderSide: BorderSide(
-                                  color: Color(0xff606060), width: 2),
+                              borderSide: const BorderSide(
+                                color: Color(0xff606060),
+                                width: 2,
+                              ),
                             ),
                           ),
                           keyboardType: TextInputType.emailAddress,
@@ -140,10 +132,12 @@ class _LoginPageState extends State<LoginPage> {
                           },
                         ),
                       ),
+
+                      // Password TextField
                       Container(
                         width: 360,
                         height: 51,
-                        margin: EdgeInsets.only(bottom: 10),
+                        margin: const EdgeInsets.only(bottom: 10),
                         child: TextFormField(
                           decoration: InputDecoration(
                             hintText: 'Password',
@@ -151,12 +145,14 @@ class _LoginPageState extends State<LoginPage> {
                               color: Colors.white,
                               fontSize: 16,
                             ),
-                            fillColor: Color(0xff606060),
+                            fillColor: const Color(0xff606060),
                             filled: true,
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(9),
-                              borderSide: BorderSide(
-                                  color: Color(0xff606060), width: 2),
+                              borderSide: const BorderSide(
+                                color: Color(0xff606060),
+                                width: 2,
+                              ),
                             ),
                           ),
                           obscureText: true,
@@ -171,11 +167,36 @@ class _LoginPageState extends State<LoginPage> {
                           },
                         ),
                       ),
-                      SizedBox(height: 20),
+
+                      // "Forgot Password?" link
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (ctx) => const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Forgot password?',
+                            style: GoogleFonts.montserrat(
+                              color: Colors.blue,
+                              fontSize: 14,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Login Button
                       if (isAuthenticating)
-                        CircularProgressIndicator()
+                        const CircularProgressIndicator()
                       else
-                        Container(
+                        SizedBox(
                           width: 350,
                           height: 51,
                           child: ElevatedButton(
@@ -183,15 +204,16 @@ class _LoginPageState extends State<LoginPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
-                              textStyle: GoogleFonts.montserrat(
-                                fontSize: 20,
-                              ),
+                              textStyle: GoogleFonts.montserrat(fontSize: 20),
                             ),
-                            child: Text('Login'),
+                            child: const Text('Login'),
                           ),
                         ),
-                      SizedBox(height: 20),
-                      Container(
+
+                      const SizedBox(height: 20),
+
+                      // Create an Account
+                      SizedBox(
                         width: 350,
                         height: 51,
                         child: ElevatedButton(
@@ -206,18 +228,18 @@ class _LoginPageState extends State<LoginPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             foregroundColor: Colors.blue,
-                            textStyle: GoogleFonts.montserrat(
-                              fontSize: 20,
-                            ),
-                            side: BorderSide(color: Colors.blue, width: 2),
+                            textStyle: GoogleFonts.montserrat(fontSize: 20),
+                            side:
+                                const BorderSide(color: Colors.blue, width: 2),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(32),
                             ),
                           ),
-                          child: Text('Create an Account'),
+                          child: const Text('Create an Account'),
                         ),
                       ),
-                      SizedBox(height: 20),
+
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),

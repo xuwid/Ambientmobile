@@ -169,8 +169,9 @@ class AmbientLightsAccount extends StatelessWidget {
                                         content:
                                             Text('User Deleted Successfully')),
                                   );
-                                  Navigator.of(context)
-                                      .pushReplacementNamed('/login');
+                                  Navigator.of(context).pushNamedAndRemoveUntil(
+                                      '/login',
+                                      (Route<dynamic> route) => false);
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

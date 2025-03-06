@@ -127,20 +127,22 @@ class _AreaScreenState extends State<AreaScreen> {
                           Navigator.of(context).pop();
                         },
                       ),
+                      const Spacer(),
                       const Image(
                           image: AssetImage("assets/zone_setup.png"),
                           width: 28,
                           color: Colors.white),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Area Setup',
-                          style: GoogleFonts.montserrat(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Area Setup',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 18,
+                          //it shi
                         ),
                       ),
+                      const Spacer(),
+                      const Spacer(),
                     ],
                   ),
                 ),

@@ -28,14 +28,12 @@ class _EditAreaState extends State<EditArea> {
     maxLightValue =
         widget.area.controller!.portlength?.reduce((a, b) => a + b) ?? 0;
 
-    // Initialize the segments list with a single segment
-
     print('Max Light Value: $maxLightValue');
   }
 
   void _addSegment() {
     setState(() {
-      int startValue = segments.isNotEmpty ? segments.last.endindex + 1 : 1;
+      int startValue = segments.isNotEmpty ? segments.last.endindex + 1 : 0;
       int endValue = startValue + 10;
 
       if (endValue > maxLightValue) endValue = maxLightValue;
@@ -153,8 +151,6 @@ class _EditAreaState extends State<EditArea> {
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(15),
                       color: Colors.black.withOpacity(0.4)),
-                  // padding: const EdgeInsets.all(16),
-
                   child: Column(
                     children: [
                       // Row for Cancel Icon and Starting Light Widget
@@ -172,7 +168,7 @@ class _EditAreaState extends State<EditArea> {
                           ),
                           const SizedBox(width: 10),
                         ],
-                      ), ////
+                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -182,7 +178,7 @@ class _EditAreaState extends State<EditArea> {
                               initialValue: segments[index].startindex,
                               minValue: index > 0
                                   ? segments[index - 1].endindex + 1
-                                  : 1, // Min value is previous segment's end + 1
+                                  : 0, // Changed from 1 to 0 for the first segment
                               maxValue: segments[index]
                                   .endindex, // Start cannot exceed end
                               onValueChanged: (newStartValue) {

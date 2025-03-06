@@ -100,74 +100,80 @@ class _ConfigureControllerScreenState extends State<ConfigureControllerScreen> {
           ),
           // Main content wrapped in a SingleChildScrollView to avoid overflow
           SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 30),
-                  AppBar(
-                    automaticallyImplyLeading: false,
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    leading: Container(
-                      margin: const EdgeInsets.all(8.0),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color.fromARGB(255, 66, 64, 64)
-                            .withOpacity(0.9),
+            child: ConstrainedBox(
+              // This ensures the content fills the entire screen height
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 30),
+                    AppBar(
+                      automaticallyImplyLeading: false,
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      leading: Container(
+                        margin: const EdgeInsets.all(8.0),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color.fromARGB(255, 66, 64, 64)
+                              .withOpacity(0.9),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back,
+                              color: Colors.white, size: 18),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
                       ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back,
-                            color: Colors.white, size: 18),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
+                      title: Text(
+                        'Configure Port',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                      centerTitle: true,
                     ),
-                    title: Text(
-                      'Configure Port',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    centerTitle: true,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Select IC Setting Type',
-                    style: GoogleFonts.montserrat(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 21),
-                  _buildLEDTypeExpansionTile(),
-                  const SizedBox(height: 20),
-                  _buildPortLengthForm(
-                      Provider.of<HomeState>(context, listen: false)
-                          .currentController),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      minimumSize: const Size(double.infinity, 45),
-                    ),
-                    onPressed: _submitConfiguration,
-                    child: Text(
-                      'Save Configuration',
+                    const SizedBox(height: 20),
+                    Text(
+                      'Select IC Setting Type',
                       style: GoogleFonts.montserrat(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 50),
-                ],
+                    const SizedBox(height: 21),
+                    _buildLEDTypeExpansionTile(),
+                    const SizedBox(height: 20),
+                    _buildPortLengthForm(
+                        Provider.of<HomeState>(context, listen: false)
+                            .currentController),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        minimumSize: const Size(double.infinity, 45),
+                      ),
+                      onPressed: _submitConfiguration,
+                      child: Text(
+                        'Save Configuration',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                  ],
+                ),
               ),
             ),
           ),
@@ -297,12 +303,6 @@ class _ConfigureControllerScreenState extends State<ConfigureControllerScreen> {
       s[i] = int.tryParse(portControllers[i].text) ?? 0;
     }
     Provider.of<HomeState>(context, listen: false).setCurrentControllerPort(s);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content:
-              Text('Configuration saved successfully! s12  ' + s.toString())),
-    );
 
     //Go to the screen , Name your Area
     Navigator.push(

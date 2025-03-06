@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Assets {
   static const kBg = 'assets/images/bg.png';
   static const kTransparentLogo = 'assets/images/transparent_logo.png';
@@ -22,3 +24,6 @@ class Assets {
   static const unselectedCustomizeIcon = 'assets/images/customize_un.png';
   static const unselectedSettingsIcon = 'assets/images/settings_un.png';
 }
+
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();

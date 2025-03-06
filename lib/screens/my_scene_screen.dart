@@ -1,16 +1,97 @@
+import 'package:ambient/models/state_models.dart';
+import 'package:ambient/screens/customize_tab.dart';
+import 'package:ambient/widgets/background_widget.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:ambient/models/state_models.dart';
-import 'package:ambient/widgets/background_widget.dart';
 
-class MyScenesScreen extends StatelessWidget {
+class MyScenesScreen extends StatefulWidget {
+  const MyScenesScreen({Key? key}) : super(key: key);
+
+  @override
+  State<MyScenesScreen> createState() => _MyScenesScreenState();
+}
+
+class _MyScenesScreenState extends State<MyScenesScreen> {
+  // Delete a scene from all activated areas of the user
+  Future<void> _editScene(BuildContext context, Scene scene) async {
+    final homeState = Provider.of<HomeState>(context, listen: false);
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            CustomizeTab(sceneToEdit: scene, admin: true, user: true),
+      ),
+    );
+
+    if (result == true) {
+      await homeState.fetchScenesForActivatedAreas();
+    }
+  }
+
+  Future<void> _deleteScene(BuildContext context, String sceneName) async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) {
+        print('No user is logged in');
+        return;
+      }
+      final firestore = FirebaseFirestore.instance;
+      final userDoc = firestore.collection('users').doc(currentUserId);
+
+      // Get all activated areas for this user
+      final areasSnapshot = await userDoc
+          .collection('areas')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      if (areasSnapshot.docs.isEmpty) {
+        print('No activated areas found.');
+        return;
+      }
+
+      bool deleted = false;
+      // Loop through each activated area and remove the scene from its list
+      for (var areaDoc in areasSnapshot.docs) {
+        final data = areaDoc.data();
+        List<dynamic>? scenesData = data['scenes'] as List<dynamic>?;
+        if (scenesData != null && scenesData.isNotEmpty) {
+          int initialLength = scenesData.length;
+          scenesData.removeWhere((scene) => scene['name'] == sceneName);
+          if (scenesData.length < initialLength) {
+            await userDoc
+                .collection('areas')
+                .doc(areaDoc.id)
+                .update({'scenes': scenesData});
+            deleted = true;
+          }
+        }
+      }
+
+      if (deleted) {
+        // Refresh the scenes list
+        final homeState = Provider.of<HomeState>(context, listen: false);
+        await homeState.fetchScenesForActivatedAreas();
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Scene "$sceneName" deleted')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Scene "$sceneName" not found')));
+      }
+    } catch (e) {
+      print('Error deleting scene: $e');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error deleting scene')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Fetch scenes when the screen is first built
     Future.microtask(() {
       final homeState = Provider.of<HomeState>(context, listen: false);
-      // Optionally set active areas before fetching scenes
       homeState.fetchScenesForActivatedAreas();
     });
 
@@ -77,7 +158,8 @@ class MyScenesScreen extends StatelessWidget {
 
                     return GridView.builder(
                       itemCount: scenes.length,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         crossAxisSpacing: 5,
                         mainAxisSpacing: 8,
@@ -91,16 +173,72 @@ class MyScenesScreen extends StatelessWidget {
                           onTap: () {
                             if (isActive) {
                               // Deactivate the scene if it's already active
-                              homeState.setActiveScene(null);
+                              homeState.setActiveScene(scene, "deactivate");
                             } else {
                               // Activate the selected scene
-                              homeState.setActiveScene(scene);
+                              homeState.setActiveScene(scene, "activate");
                               print('Selected scene: ${scene.colors}');
-                              // Display LED settings of a scene when it is selected
-                              //       scene.ledSettings.forEach((led) {
-                              //       debugPrint('LED ${led.ledNumber}: ${led.color} '
-                              //          '${led.brightness} ${led.saturation}');
-                              //    });
+                            }
+                          },
+                          onLongPress: () async {
+                            final action = await showDialog<String>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Scene Options'),
+                                content: const Text('Choose an action'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, 'edit'),
+                                    child: const Text('Edit'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, 'delete'),
+                                    child: const Text('Delete'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, 'cancel'),
+                                    child: const Text('Cancel'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (action == 'delete') {
+                              // Show a confirmation dialog on long press
+                              final confirmDelete = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Delete Scene'),
+                                  content: const Text(
+                                      'Are you sure you want to delete this scene?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              ///  homeState.setCurrentArea();
+                              if (confirmDelete == true) {
+                                await _deleteScene(context, scene.name);
+                              }
+                            } else if (action == 'edit') {
+                              Area? cArea = await homeState
+                                  .fetchAreaForSceneName(scene.name);
+                              print('Current Area: ${cArea!.title}');
+                              homeState.setCurrentArea(cArea);
+                              await _editScene(context, scene);
                             }
                           },
                           child: Padding(

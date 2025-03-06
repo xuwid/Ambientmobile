@@ -13,9 +13,9 @@ class SegmentsScreen extends StatefulWidget {
 
 class _SegmentScreenState extends State<SegmentsScreen> {
   List<Segments> segments = [];
-
   late int maxLightValue;
   List<bool> localPorts = [false, false, false, false];
+
   @override
   void initState() {
     super.initState();
@@ -25,15 +25,14 @@ class _SegmentScreenState extends State<SegmentsScreen> {
       maxLightValue =
           homeState.currentController?.portlength?.reduce((a, b) => a + b) ?? 0;
 
-      // Initialize the segments list with a single segment
-
+      // Initialize segments list if necessary (here, starting empty)
       print('Max Light Value: $maxLightValue');
     });
   }
 
   void _addSegment() {
     setState(() {
-      int startValue = segments.isNotEmpty ? segments.last.endindex + 1 : 1;
+      int startValue = segments.isNotEmpty ? segments.last.endindex + 1 : 0;
       int endValue = startValue + 10;
 
       if (endValue > maxLightValue) endValue = maxLightValue;
@@ -106,160 +105,168 @@ class _SegmentScreenState extends State<SegmentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: BackgroundWidget(
-            child: Column(children: [
-      const SizedBox(height: 60),
-      AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8.0),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color.fromARGB(255, 66, 64, 64).withOpacity(0.9),
-          ),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Colors.white,
-              size: 18,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-        ),
-        title: Row(
-          children: [
-            const Spacer(),
-            Text(
-              'Segments',
-              style: GoogleFonts.montserrat(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            const Spacer()
-          ],
-        ),
-        centerTitle: true,
-      ),
-      // Port Checkboxes Section
-      Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: BackgroundWidget(
         child: Column(
           children: [
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Ports',
-                  style: GoogleFonts.montserrat(
+            const SizedBox(height: 60),
+            AppBar(
+              automaticallyImplyLeading: false,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: Container(
+                margin: const EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color.fromARGB(255, 66, 64, 64).withOpacity(0.9),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back,
                     color: Colors.white,
-                    fontSize: 16,
+                    size: 18,
                   ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
                 ),
-                Expanded(
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: List.generate(4, (portIndex) {
-                        return Row(
-                          children: [
-                            Text(
-                              '${portIndex + 1}',
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Checkbox(
-                              value: localPorts[portIndex],
-                              onChanged: (bool? value) {
-                                setState(() {
-                                  localPorts[portIndex] = value ?? false;
-                                });
-                              },
-                              checkColor: Colors.white,
-                              activeColor: Colors.blue,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ],
-                        );
-                      })),
-                ),
-              ],
+              ),
+              title: Row(
+                children: [
+                  const Spacer(),
+                  Text(
+                    'Segments',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Spacer()
+                ],
+              ),
+              centerTitle: true,
             ),
-          ],
-        ),
-      ),
-      // Segments Section
-      Expanded(
-        child: ListView.builder(
-          itemCount: segments.length,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 20.0),
+            // Port Checkboxes Section
+            Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  // Starting Light Widget for each segment
-                  StartingLightWidget(
-                    title: "Starting Light for Segment ${index + 1}",
-                    initialValue: segments[index].startindex,
-                    minValue: index > 0
-                        ? segments[index - 1].endindex + 1
-                        : 1, // Min value is previous segment's end + 1
-                    maxValue:
-                        segments[index].endindex, // Start cannot exceed end
-                    onValueChanged: (newStartValue) {
-                      _updateSegment(index, newStartValue: newStartValue);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  // Ending Light Widget for each segment
-                  StartingLightWidget(
-                    title: "Ending Light for Segment ${index + 1}",
-                    initialValue: segments[index].endindex,
-                    minValue: segments[index]
-                        .startindex, // End cannot be less than start
-                    maxValue: maxLightValue, // End cannot exceed max value
-                    onValueChanged: (newEndValue) {
-                      _updateSegment(index, newEndValue: newEndValue);
-                    },
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Ports',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: List.generate(4, (portIndex) {
+                            return Row(
+                              children: [
+                                Text(
+                                  '${portIndex + 1}',
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Checkbox(
+                                  value: localPorts[portIndex],
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      localPorts[portIndex] = value ?? false;
+                                    });
+                                  },
+                                  checkColor: Colors.white,
+                                  activeColor: Colors.blue,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ],
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            );
-          },
+            ),
+            // Segments Section
+            Expanded(
+              child: ListView.builder(
+                itemCount: segments.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 20.0),
+                    child: Column(
+                      children: [
+                        // Starting Light Widget for each segment
+                        StartingLightWidget(
+                          title: "Starting Light for Segment ${index + 1}",
+                          initialValue: segments[index].startindex,
+                          minValue: index > 0
+                              ? segments[index - 1].endindex + 1
+                              : 0, // Changed from 1 to 0 for the first segment
+                          maxValue: segments[index]
+                              .endindex, // Start cannot exceed end
+                          onValueChanged: (newStartValue) {
+                            _updateSegment(index, newStartValue: newStartValue);
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        // Ending Light Widget for each segment
+                        StartingLightWidget(
+                          title: "Ending Light for Segment ${index + 1}",
+                          initialValue: segments[index].endindex,
+                          minValue: segments[index]
+                              .startindex, // End cannot be less than start
+                          maxValue:
+                              maxLightValue, // End cannot exceed max value
+                          onValueChanged: (newEndValue) {
+                            _updateSegment(index, newEndValue: newEndValue);
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _addSegment,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                  ),
+                  child: Text('Add Segment',
+                      style: GoogleFonts.montserrat(color: Colors.white)),
+                ),
+                ElevatedButton(
+                  onPressed: _printSegments,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                  ),
+                  child: Text('Add Area',
+                      style: GoogleFonts.montserrat(color: Colors.white)),
+                ),
+              ],
+            )
+          ],
         ),
       ),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          ElevatedButton(
-            onPressed: _addSegment,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            child: Text('Add Segment',
-                style: GoogleFonts.montserrat(color: Colors.white)),
-          ),
-          ElevatedButton(
-            onPressed: _printSegments,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            child: Text('Add Area',
-                style: GoogleFonts.montserrat(color: Colors.white)),
-          ),
-        ],
-      )
-    ])));
+    );
   }
 }

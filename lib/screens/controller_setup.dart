@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ambient/widgets/background_widget.dart';
 import 'package:ambient/models/state_models.dart';
 import 'package:provider/provider.dart';
-import 'package:ambient/wirelessProtocol/mqtt.dart';
 
 class ControllerSetup extends StatefulWidget {
   @override
@@ -15,72 +14,6 @@ class _ControllerSetupState extends State<ControllerSetup> {
   Controller? _selectedController;
   final ExpansionTileController etc = ExpansionTileController();
   final TextEditingController _nameController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  Widget _buildControllerSelectionExpansionTile() {
-    final homeState = Provider.of<HomeState>(context);
-    final controllers = homeState.controllers;
-
-    return Padding(
-      padding: const EdgeInsets.all(22.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-          border: const Border(
-            bottom: BorderSide(
-              color: Color(0xFF545458),
-              width: 1.2,
-            ),
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              dividerColor: Colors.transparent,
-              splashColor: Colors.transparent,
-            ),
-            child: ExpansionTile(
-              controller: etc,
-              iconColor: Colors.white,
-              collapsedIconColor: Colors.white,
-              title: Text(
-                selectedController ?? 'Select a Controller',
-                style: const TextStyle(color: Colors.white),
-              ),
-              backgroundColor: Colors.black.withOpacity(0.2),
-              collapsedBackgroundColor: Colors.black.withOpacity(0.3),
-              children: controllers.map((contr) {
-                return ListTile(
-                  title: Text(
-                    contr.name,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {
-                    setState(() {
-                      _selectedController = contr;
-                      selectedController = contr.name;
-                      _nameController.text =
-                          contr.name; // Initialize with current name
-                    });
-
-                    Provider.of<HomeState>(context, listen: false)
-                        .setCurrentController(contr);
-                    etc.collapse();
-                  },
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +144,83 @@ class _ControllerSetupState extends State<ControllerSetup> {
                   ),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildControllerSelectionExpansionTile() {
+    final homeState = Provider.of<HomeState>(context);
+    final controllers = homeState.controllers.where((contr) {
+      return contr.isActive;
+    }).toList();
+
+    if (controllers.isEmpty) {
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(22.0),
+          child: Center(
+            child: Text(
+              'No active controllers available.',
+              style: GoogleFonts.montserrat(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(22.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          border: const Border(
+            bottom: BorderSide(
+              color: Color(0xFF545458),
+              width: 1.2,
+            ),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              dividerColor: Colors.transparent,
+              splashColor: Colors.transparent,
+            ),
+            child: ExpansionTile(
+              controller: etc,
+              iconColor: Colors.white,
+              collapsedIconColor: Colors.white,
+              title: Text(
+                selectedController ?? 'Select a Controller',
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.black.withOpacity(0.2),
+              collapsedBackgroundColor: Colors.black.withOpacity(0.3),
+              children: controllers.map((contr) {
+                return ListTile(
+                  title: Text(
+                    contr.name,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedController = contr;
+                      selectedController = contr.name;
+                      _nameController.text =
+                          contr.name; // Initialize with current name
+                    });
+
+                    Provider.of<HomeState>(context, listen: false)
+                        .setCurrentController(contr);
+                    etc.collapse();
+                  },
+                );
+              }).toList(),
+            ),
           ),
         ),
       ),

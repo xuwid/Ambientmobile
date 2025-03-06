@@ -1,0 +1,2 @@
+/Users/ahmed/Documents/GitHub/Ambientmobile/android/app/.cxx/Debug/3r2hl532/x86_64/CMakeFiles/edit_cache.dir
+/Users/ahmed/Documents/GitHub/Ambientmobile/android/app/.cxx/Debug/3r2hl532/x86_64/CMakeFiles/rebuild_cache.dir

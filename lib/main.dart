@@ -1,3 +1,4 @@
+import 'package:ambient/utils/assets.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -5,7 +6,7 @@ import 'package:ambient/screens/homescreen.dart'; // Your HomeScreen
 import 'package:ambient/models/state_models.dart'; // Your state management
 import 'package:ambient/screens/Login.dart';
 import 'package:ambient/screens/Signup.dart';
-import 'package:ambient/screens/splash.dart'; // Import your SplashScreen
+import 'package:ambient/screens/splash.dart'; // Your SplashScreen widget
 import 'firebase_options.dart'; // Import your Firebase options
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -42,6 +43,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: scaffoldMessengerKey,
+      debugShowCheckedModeBanner: false,
       title: 'Your App',
       theme: ThemeData().copyWith(
         useMaterial3: true,
@@ -49,30 +52,12 @@ class MyApp extends StatelessWidget {
           seedColor: const Color.fromARGB(255, 63, 17, 177),
         ),
       ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (ctx, userSnapshot) {
-          if (userSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          if (userSnapshot.hasError) {
-            print('Auth state error: ${userSnapshot.error}');
-            return const Center(
-              child: Text('An error occurred.'),
-            );
-          }
-          if (userSnapshot.hasData) {
-            return const HomeScreen(); // Navigate to the HomeScreen if logged in
-          }
-          return const SplashScreenWrapper(); // Show the splash screen first, then login
-        },
-      ),
+      // Always show splash screen first.
+      home: const SplashScreenWrapper(),
       routes: {
         '/homeTab': (context) => const HomeScreen(),
         '/login': (context) => LoginPage(),
-        '/signup': (context) => SignUpPage(), // Add signup page if needed
+        '/signup': (context) => SignUpPage(),
         // Other routes...
       },
     );
@@ -94,25 +79,20 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
   }
 
   _navigateToNext() async {
-    print("Navigating to the next screen...");
-    await Future.delayed(const Duration(seconds: 2)); // Simulate loading time
+    // Always display splash for 2 seconds.
+    await Future.delayed(const Duration(seconds: 2));
     final User? user = FirebaseAuth.instance.currentUser;
-
     if (user != null) {
-      // User is signed in.
-      print("User is signed in. Navigating to HomeScreen.");
-      Navigator.pushReplacementNamed(
-          context, '/homeTab'); // Navigate to home if authenticated
+      // User is signed in, navigate to HomeScreen.
+      Navigator.pushReplacementNamed(context, '/homeTab');
     } else {
-      // User is not signed in.
-      print("User is not signed in. Navigating to LoginPage.");
-      Navigator.pushReplacementNamed(
-          context, '/login'); // Navigate to login if not authenticated
+      // User is not signed in, navigate to LoginPage.
+      Navigator.pushReplacementNamed(context, '/login');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const SplashScreen(); // Display your splash screen
+    return const SplashScreen(); // Display your splash screen widget
   }
 }

@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app uses Bluetooth to connect to controllers.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app requires location access to scan for nearby Bluetooth devices.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -45,22 +49,16 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	
-	<!-- Add Bluetooth Permission Keys -->
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>This app uses Bluetooth to communicate with nearby devices.</string>
-
+	<!-- Bluetooth Permission Keys -->
 	<key>UIBackgroundModes</key>
 	<array>
-    	<string>bluetooth-central</string>
+		<string>bluetooth-central</string>
 	</array>
-
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Looking for local tcp Bonjour service</string>
 	<key>NSBonjourServices</key>
 	<array>
-  		<string>mqtt.tcp</string>
+		<string>mqtt.tcp</string>
 	</array>
-	
 </dict>
 </plist>

@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:ambient/utils/assets.dart';
 import 'package:ambient/widgets/color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -37,6 +38,13 @@ class Scene {
   int brightness;
   int density;
   List<int> colors;
+  Scene copy() {
+    return Scene(
+      name: name,
+      patternID: patternID,
+      colors: List.from(colors),
+    );
+  }
 
   Scene({
     this.name = 'Scene 1',
@@ -81,6 +89,7 @@ class Scene {
   void setName(String name) {
     this.name = name;
   }
+  //maakee a copy thing
 
   factory Scene.fromMap(Map<String, dynamic> map) {
     return Scene(
@@ -422,28 +431,29 @@ class HomeState with ChangeNotifier {
   }
 
 // Pattern ID Definitions
-  int M_BLINK = 0;
-  int M_BLINK_MULTIPLE = 1;
-  int M_PULSE = 2;
-  int M_PULSE_MULTIPLE = 3;
-  int M_STATIC = 4;
-  int M_STATIC_MULTIPLE = 5;
-  int M_TWINKLE = 6;
-  int M_FIRE = 7;
-  int M_BPM = 8;
-  int M_CHASE = 9;
-  int M_GRADIENT_STATIC = 10;
-  int M_GRADIENT = 11;
-  int M_FAIRY_TWINKLE = 12;
-  int M_CHASE_FILL = 13;
-  int M_LIGHTNING = 14;
-  int M_METEOR = 15;
-  int M_METEOR_MULTIPLE = 16;
-  int M_RAINBOW = 17;
-  int M_WIPE = 18;
-  int M_WIPE_RANDOM = 19;
-  int M_SOLID_GLITTER = 20;
-  int M_PIXELS = 21;
+  static const int M_BLINK = 0;
+  static const int M_BLINK_MULTIPLE = 1;
+  static const int M_PULSE = 2;
+  static const int M_PULSE_MULTIPLE = 3;
+  static const int M_STATIC = 4;
+  static const int M_STATIC_MULTIPLE = 5;
+  static const int M_TWINKLE = 6;
+  static const int M_FIRE = 7;
+  static const int M_BPM = 8;
+  static const int M_CHASE = 9;
+  static const int M_GRADIENT_STATIC = 10;
+  static const int M_GRADIENT = 11;
+  static const int M_FAIRY_TWINKLE = 12;
+  static const int M_CHASE_FILL = 13;
+  static const int M_LIGHTNING = 14;
+  static const int M_METEOR = 15;
+  static const int M_METEOR_MULTIPLE = 16;
+  static const int M_RAINBOW = 17;
+  static const int M_WIPE = 18;
+  static const int M_WIPE_RANDOM = 19;
+  static const int M_SOLID_GLITTER = 20;
+  static const int M_PIXELS = 21;
+
   final List<String> events = [
     'Static',
     'Gradient',
@@ -493,6 +503,52 @@ class HomeState with ChangeNotifier {
       default:
         return -1; // Return -1 if event name is not found
     }
+  }
+
+  String convertPatternIdToEvent(int patternId) {
+    switch (patternId) {
+      case M_STATIC:
+        return 'Static';
+      case M_GRADIENT:
+        return 'Gradient';
+      case M_TWINKLE:
+        return 'Twinklecat';
+      case M_FAIRY_TWINKLE:
+        return 'Fairytwinkle';
+      case M_CHASE:
+        return 'Chase';
+      case M_PULSE:
+        return 'Breathe';
+      case M_LIGHTNING:
+        return 'Lightning';
+      case M_METEOR:
+        return 'Meteor';
+      case M_METEOR_MULTIPLE:
+        return 'Multi Comet';
+      case M_PIXELS:
+        return 'Pixels';
+      case M_RAINBOW:
+        return 'Rainbow';
+      case M_SOLID_GLITTER:
+        return 'Solid Glitter';
+      case M_WIPE:
+        return 'Wipe';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String? selectedTimezone;
+  String? selectedLocation;
+
+  void setSelectedTimezone(String tzValue) {
+    selectedTimezone = tzValue;
+    notifyListeners();
+  }
+
+  void setSelectedLocation(String location) {
+    selectedLocation = location;
+    notifyListeners();
   }
 
   List<Controller> _controllers = [];
@@ -841,7 +897,7 @@ class HomeState with ChangeNotifier {
     notifyListeners(); // Notify listeners to rebuild the UI
   }
 
-  void getControllersForUser() {
+  Future<void> getControllersForUser() async {
     List<Controller> fetchedControllers = [];
 
     for (var area in _areas) {
@@ -941,8 +997,6 @@ class HomeState with ChangeNotifier {
   String? _selectedTimezone;
   String? _selectedLocation;
 
-  String? get selectedTimezone => _selectedTimezone;
-  String? get selectedLocation => _selectedLocation;
   List<Area> get areas => _areas;
   //zone Active by toggle
   List<Scene> _scenes = [];
@@ -1176,15 +1230,21 @@ class HomeState with ChangeNotifier {
   }
 
   // Method to set the active scene
-  Future<void> setActiveScene(Scene? scene) async {
+  Future<void> setActiveScene(Scene? scene, String ack) async {
     if (scene == null) {
       activeScene = null;
       notifyListeners();
       print('Error: Scene is null.');
       return;
     }
-    activeScene = scene.name;
-    notifyListeners();
+    if (activeScene == scene.name) {
+      activeScene = null;
+      notifyListeners();
+      print("Scene is al");
+    } else if (activeScene != scene.name) {
+      activeScene = scene.name;
+      notifyListeners();
+    }
     // Ensure MQTT connection is established
     await mqttService.connect();
 
@@ -1203,7 +1263,7 @@ class HomeState with ChangeNotifier {
         final typefda = controller.type;
         // Prepare the JSON payload
         Map<String, dynamic> jsonMessage = {
-          "a": "activate",
+          "a": ack,
           "type": typefda,
           "portlength":
               controller.portlength ?? [], // Controller's port lengths
@@ -1237,13 +1297,14 @@ class HomeState with ChangeNotifier {
     }
   }
 
-  Future<void> setActiveSceneAdmin(Scene? scene) async {
-    if (scene == null) {
-      print('Error: Scene is null.');
-      return;
+  Future<void> setActiveSceneAdmin(Scene? scene, String act) async {
+    if (scene!.name == activeScene) {
+      activeScene = null;
+      notifyListeners();
+    } else if (scene.name != activeScene) {
+      activeScene = scene.name;
+      notifyListeners();
     }
-    activeScene = scene.name;
-    notifyListeners();
 
     // Ensure MQTT connection is established
     await mqttService.connect();
@@ -1266,7 +1327,7 @@ class HomeState with ChangeNotifier {
 
           // Prepare the JSON payload
           Map<String, dynamic> jsonMessage = {
-            "a": "activate",
+            "a": act,
             "type": controller.type,
             "portlength":
                 controller.portlength ?? [], // Controller's port lengths
@@ -1283,6 +1344,7 @@ class HomeState with ChangeNotifier {
               "density": scene.density ?? 0,
             },
           };
+          print(jsonMessage);
           String top = "/" + controllerId + "/data";
 
           // Publish the JSON message to the controller's topic (controller ID)
@@ -1383,18 +1445,6 @@ class HomeState with ChangeNotifier {
   // }
 //  }
 
-  void setSelectedTimezone(String? timezone) async {
-    _selectedTimezone = timezone;
-    notifyListeners();
-    await _updateUserPreferences();
-  }
-
-  void setSelectedLocation(String? location) async {
-    _selectedLocation = location;
-    notifyListeners();
-    await _updateUserPreferences();
-  }
-
   Future<void> _updateUserPreferences() async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
@@ -1491,35 +1541,119 @@ class HomeState with ChangeNotifier {
     }
   }
 
-  void addSceneToCurrentArea(Scene scene) async {
-    if (_currentArea != null) {
-      // Initialize the scenes list if it's null
-      _currentArea!.scenes ??= [];
+  Future<Area?> fetchAreaForSceneName(String sceneName) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      print('No user is logged in');
+      return null;
+    }
+    final firestore = FirebaseFirestore.instance;
+    final userDoc = firestore.collection('users').doc(currentUserId);
 
-      // Add the new scene to the local area
+    // Fetch all activated areas
+    final areasSnapshot = await userDoc
+        .collection('areas')
+        .where('isActive', isEqualTo: true)
+        .get();
+
+    // Loop through each area to see if it contains the scene with the given name.
+    for (var areaDoc in areasSnapshot.docs) {
+      final data = areaDoc.data();
+      List<dynamic>? scenesData = data['scenes'] as List<dynamic>?;
+      if (scenesData != null && scenesData.isNotEmpty) {
+        bool found = scenesData.any((scene) => scene['name'] == sceneName);
+        if (found) {
+          // Convert the area document to an Area model
+          return Area.fromMap(data);
+        }
+      }
+    }
+    return null;
+  }
+
+  Future<void> addOrUpdateSceneToCurrentArea(Scene scene,
+      {Scene? originalScene}) async {
+    if (_currentArea == null) return;
+
+    // Initialize the local scenes list if needed.
+    _currentArea!.scenes ??= [];
+
+    if (originalScene == null) {
+      // Creation scenario.
+      bool exists = _currentArea!.scenes!
+          .any((existingScene) => existingScene.name == scene.name);
+      if (exists) {
+        print('Scene with this name already exists in the current area.');
+        // You can show an error message via Snackbar or other means.
+
+        return;
+      }
+      // Add the new scene locally.
       _currentArea!.scenes!.add(scene);
 
-      // Update Firestore
       try {
         final currentUserId = FirebaseAuth.instance.currentUser?.uid;
         final firestore = FirebaseFirestore.instance;
         final userDoc = firestore.collection('users').doc(currentUserId);
-        final areaRef = userDoc
-            .collection('areas')
-            .doc(_currentArea!.id); // Get reference to the current area
+        final areaRef = userDoc.collection('areas').doc(_currentArea!.id);
 
-        // Update the scenes in Firestore
+        // Add the new scene to Firestore.
         await areaRef.update({
-          'scenes': FieldValue.arrayUnion(
-              [scene.toMap()]), // Assuming scene has a toMap method
+          'scenes': FieldValue.arrayUnion([scene.toMap()]),
         });
-
         print('Scene added to area in Firestore');
-        notifyListeners(); // Notify listeners of the change
+        notifyListeners();
       } catch (e) {
         print('Failed to add scene to area in Firestore: $e');
       }
+    } else {
+      // Update scenario.
+      // If the scene name was changed, check for duplicates.
+      if (scene.name != originalScene.name) {
+        bool exists = _currentArea!.scenes!
+            .any((existingScene) => existingScene.name == scene.name);
+        if (exists) {
+          print('Scene with this name already exists in the current area.');
+          // You can show an error message via Snackbar or other means.
+          return;
+        }
+      }
+
+      // Remove the old scene locally.
+      _currentArea!.scenes!.removeWhere(
+          (existingScene) => existingScene.name == originalScene.name);
+      // Add the updated scene locally.
+      _currentArea!.scenes!.add(scene);
+
+      try {
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        final firestore = FirebaseFirestore.instance;
+        final userDoc = firestore.collection('users').doc(currentUserId);
+        final areaRef = userDoc.collection('areas').doc(_currentArea!.id);
+
+        // Remove the old scene from Firestore.
+        await areaRef.update({
+          'scenes': FieldValue.arrayRemove([originalScene.toMap()]),
+        });
+
+        // Add the updated scene to Firestore.
+        await areaRef.update({
+          'scenes': FieldValue.arrayUnion([scene.toMap()]),
+        });
+        print('Scene updated in area in Firestore');
+        notifyListeners();
+      } catch (e) {
+        print('Failed to update scene in area in Firestore: $e');
+      }
     }
+  }
+
+  void _showSnackBar(BuildContext context, String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    });
   }
 
   void createArea(String title,

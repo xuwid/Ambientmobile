@@ -24,21 +24,21 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void initState() {
     super.initState();
-
     currentUser = FirebaseAuth.instance.currentUser;
 
-    // Check if user is authenticated
     if (currentUser != null) {
-      // Fetch areas for the current user when the widget is initialized
-      final homeState = Provider.of<HomeState>(context, listen: false);
-      homeState.getAreasForUser(currentUser!.uid);
-      homeState.getControllersForUser();
-      _checkAdminStatus(homeState);
-
-      // _checkAdminStatus(homeState);
+      // Wait until the first frame is rendered.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final homeState = Provider.of<HomeState>(context, listen: false);
+        // Await the fetching of areas first.
+        await homeState.getAreasForUser(currentUser!.uid);
+        // Now fetch controllers, which are calculated based on the fetched areas.
+      await homeState.getControllersForUser();
+        _checkAdminStatus(homeState);
+      });
     } else {
-      // Handle the case where there is no current user
-      // For example, you might want to show a login screen or an error message
+      // Handle the case where there is no current user.
+      // For example, navigate to a login screen or show an error message.
     }
   }
 

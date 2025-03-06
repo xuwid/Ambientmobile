@@ -27,7 +27,7 @@ class SettingsPage extends StatelessWidget {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AmbientLightsAccount(),
+                        builder: (context) => const AmbientLightsAccount(),
                       ),
                     ),
                   ),

@@ -184,47 +184,84 @@ class _ChristmasSpectacularState extends State<ChristmasSpectacular> {
                               return GestureDetector(
                                 onTap: () {
                                   if (isActive) {
-                                    homeState.setActiveScene(null);
+                                    homeState.setActiveSceneAdmin(
+                                        Scene.fromMap(scene), "deactivate");
                                   } else {
                                     homeState.setActiveSceneAdmin(
-                                        Scene.fromMap(scene));
+                                        Scene.fromMap(scene), "activate");
                                   }
                                 },
                                 onLongPress: () async {
                                   if (isAdmin) {
-                                    final confirmDelete =
-                                        await showDialog<bool>(
+                                    final action = await showDialog<String>(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Text('Delete Scene'),
+                                        title: const Text('Scene Options'),
                                         content: const Text(
-                                            'Are you sure you want to delete this scene?'),
+                                            'Choose an action for this scene'),
                                         actions: [
                                           TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context).pop(false);
-                                            },
-                                            child: const Text('Cancel'),
+                                            onPressed: () =>
+                                                Navigator.pop(context, 'edit'),
+                                            child: const Text('Edit'),
                                           ),
                                           TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context).pop(true);
-                                            },
+                                            onPressed: () => Navigator.pop(
+                                                context, 'delete'),
                                             child: const Text('Delete'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(
+                                                context, 'cancel'),
+                                            child: const Text('Cancel'),
                                           ),
                                         ],
                                       ),
                                     );
 
-                                    if (confirmDelete == true) {
-                                      await _deleteScene(scene['name']);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                              'Scene "${scene['name']}" deleted'),
+                                    if (action == 'delete') {
+                                      final confirmDelete =
+                                          await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Delete Scene'),
+                                          content: const Text(
+                                              'Are you sure you want to delete this scene?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
                                         ),
                                       );
+
+                                      if (confirmDelete == true) {
+                                        await _deleteScene(scene['name']);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text(
+                                                  'Scene "${scene['name']}" deleted')),
+                                        );
+                                      }
+                                    } else if (action == 'edit') {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CustomizeTab(
+                                            admin: true,
+                                            selectedEvent: widget.selectedEvent,
+                                            sceneToEdit: Scene.fromMap(scene),
+                                          ),
+                                        ),
+                                      ).then((_) => _fetchScenesAndUpdateUI());
                                     }
                                   }
                                 },
